@@ -1,4 +1,5 @@
-import { Bot, Search, Sparkles } from "lucide-react";
+import Link from "next/link";
+import { Bot, ExternalLink, Sparkles } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { DashboardOverview } from "@/services/dashboard";
 
@@ -15,8 +16,15 @@ export function AgentPanel({ overview }: AgentPanelProps) {
 
   return (
     <Card className="min-h-80">
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between gap-3">
         <CardTitle>Agent Panel</CardTitle>
+        <Link
+          href="/agent"
+          className="inline-flex h-8 items-center gap-2 rounded-md border border-zinc-200 px-2.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+        >
+          <ExternalLink className="size-3.5" aria-hidden="true" />
+          Open
+        </Link>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-start gap-3 rounded-md border border-zinc-200 bg-zinc-50 p-3">
@@ -45,13 +53,13 @@ export function AgentPanel({ overview }: AgentPanelProps) {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-3 rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-500">
-          <Search className="size-4" aria-hidden="true" />
-          <span className="truncate">Quick Search visual</span>
-          <span className="ml-auto rounded border border-zinc-200 px-1.5 py-0.5 text-xs text-zinc-400">
-            /
-          </span>
-        </div>
+        <Link
+          href="/agent"
+          className="flex items-center justify-between gap-3 rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+        >
+          <span className="truncate">Ask the Agent about today&apos;s work</span>
+          <ExternalLink className="size-4 shrink-0" aria-hidden="true" />
+        </Link>
       </CardContent>
     </Card>
   );
