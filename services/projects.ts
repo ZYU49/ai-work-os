@@ -2,10 +2,10 @@ import {
   Prisma,
   Priority,
   ProjectStatus,
-  type PrismaClient,
   type Project,
 } from "@prisma/client";
 import { z } from "zod";
+import { recordActivity } from "@/lib/activity";
 import { prisma } from "@/lib/db";
 
 const projectStatusValues = Object.values(ProjectStatus) as [
@@ -55,26 +55,6 @@ const projectDetailInclude = {
     orderBy: [{ updatedAt: "desc" as const }, { createdAt: "desc" as const }],
   },
 } satisfies Prisma.ProjectInclude;
-
-type ActivityAction = "project.created" | "project.updated";
-type ActivityWriter = Pick<PrismaClient, "activityLog">;
-
-async function writeProjectActivity(
-  client: ActivityWriter,
-  projectId: string,
-  action: ActivityAction,
-  metadata?: Prisma.InputJsonValue,
-) {
-  await client.activityLog.create({
-    data: {
-      projectId,
-      action,
-      entityType: "Project",
-      entityId: projectId,
-      metadata,
-    },
-  });
-}
 
 function createProjectData(
   input: CreateProjectInput,
@@ -145,10 +125,21 @@ export async function createProject(input: CreateProjectInput) {
       data: createProjectData(input),
     });
 
-    await writeProjectActivity(tx, project.id, "project.created", {
-      name: input.name,
-      companyName: input.companyName ?? null,
-    });
+    await recordActivity(
+      {
+        projectId: project.id,
+        action: "project.created",
+        entityType: "Project",
+        entityId: project.id,
+        title: "Project created",
+        description: project.name,
+        metadata: {
+          name: input.name,
+          companyName: input.companyName ?? null,
+        },
+      },
+      tx,
+    );
 
     return project;
   });
@@ -161,10 +152,21 @@ export async function updateProject(id: string, input: UpdateProjectInput) {
       data: updateProjectData(input),
     });
 
-    await writeProjectActivity(tx, project.id, "project.updated", {
-      changedFields: Object.keys(input),
-      companyName: input.companyName ?? null,
-    });
+    await recordActivity(
+      {
+        projectId: project.id,
+        action: "project.updated",
+        entityType: "Project",
+        entityId: project.id,
+        title: "Project updated",
+        description: project.name,
+        metadata: {
+          changedFields: Object.keys(input),
+          companyName: input.companyName ?? null,
+        },
+      },
+      tx,
+    );
 
     return project;
   });

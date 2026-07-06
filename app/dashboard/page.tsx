@@ -1,26 +1,47 @@
-import { Badge } from "@/components/ui/badge";
+import { connection } from "next/server";
+import { AlertCircle } from "lucide-react";
+import { DashboardGrid } from "@/components/dashboard/dashboard-grid";
 import { EmptyState } from "@/components/ui/empty-state";
+import {
+  getDashboardOverview,
+  type DashboardOverview,
+} from "@/services/dashboard";
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  await connection();
+
+  let overview: DashboardOverview | null = null;
+  let error: string | null = null;
+
+  try {
+    overview = await getDashboardOverview();
+  } catch (dashboardError) {
+    console.error("Failed to load dashboard overview", dashboardError);
+    error =
+      "Dashboard data is unavailable. Check the PostgreSQL connection and refresh when the database is running.";
+  }
+
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-normal text-zinc-950">
-            Dashboard
-          </h1>
-          <p className="mt-1 max-w-2xl text-sm leading-6 text-zinc-500">
-            A focused workspace for current projects, tasks, notes, and agent
-            activity.
-          </p>
-        </div>
-        <Badge tone="neutral">Setup in progress</Badge>
+      <div>
+        <h1 className="text-2xl font-semibold tracking-normal text-zinc-950">
+          Dashboard
+        </h1>
+        <p className="mt-1 max-w-2xl text-sm leading-6 text-zinc-500">
+          A focused workspace for today&apos;s tasks, mail, files, project
+          activity, and follow-ups.
+        </p>
       </div>
 
-      <EmptyState
-        title="Dashboard workspace is ready"
-        description="Task 5 will add the full dashboard widgets. For now, this page keeps the app route usable without introducing placeholder metrics."
-      />
+      {error || !overview ? (
+        <EmptyState
+          title="Dashboard data is unavailable"
+          description={error ?? "Unable to load dashboard data."}
+          icon={<AlertCircle className="size-6" aria-hidden="true" />}
+        />
+      ) : (
+        <DashboardGrid overview={overview} />
+      )}
     </div>
   );
 }
