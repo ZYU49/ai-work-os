@@ -241,7 +241,7 @@ model DailyLog {
   user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   project     Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
 
-  @@index([date])
+  @@unique([date])
 }
 
 model ActivityLog {

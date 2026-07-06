@@ -284,7 +284,7 @@ CREATE INDEX "FollowUp_projectId_idx" ON "FollowUp"("projectId");
 CREATE INDEX "FollowUp_dueDate_idx" ON "FollowUp"("dueDate");
 
 -- CreateIndex
-CREATE INDEX "DailyLog_date_idx" ON "DailyLog"("date");
+CREATE UNIQUE INDEX "DailyLog_date_key" ON "DailyLog"("date");
 
 -- CreateIndex
 CREATE INDEX "ActivityLog_createdAt_idx" ON "ActivityLog"("createdAt");
