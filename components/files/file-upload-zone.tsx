@@ -2,6 +2,7 @@
 
 import { UploadCloud } from "lucide-react";
 import { ChangeEvent, DragEvent, FormEvent, useRef, useState } from "react";
+import { ProjectSelect } from "@/components/projects/project-select";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -164,24 +165,23 @@ export function FileUploadZone({ onUploaded }: FileUploadZoneProps) {
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <Input
-              value={projectId}
-              onChange={(event) => setProjectId(event.target.value)}
-              placeholder="Project ID"
-            />
-            <select
-              value={category}
-              onChange={(event) =>
-                setCategory(event.target.value as typeof category)
-              }
-              className="h-9 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm text-zinc-950 shadow-sm outline-none transition-colors focus:border-zinc-400 focus:ring-4 focus:ring-zinc-200/70"
-            >
-              {categories.map((value) => (
-                <option key={value} value={value}>
-                  {label(value)}
-                </option>
-              ))}
-            </select>
+            <ProjectSelect value={projectId} onChange={setProjectId} />
+            <label className="flex flex-col gap-1 text-sm font-medium text-zinc-700">
+              Category
+              <select
+                value={category}
+                onChange={(event) =>
+                  setCategory(event.target.value as typeof category)
+                }
+                className="h-9 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm font-normal text-zinc-950 shadow-sm outline-none transition-colors focus:border-zinc-400 focus:ring-4 focus:ring-zinc-200/70"
+              >
+                {categories.map((value) => (
+                  <option key={value} value={value}>
+                    {label(value)}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
 
           <Input

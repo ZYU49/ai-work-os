@@ -2,9 +2,9 @@
 
 import { ClipboardPaste } from "lucide-react";
 import { FormEvent, useState } from "react";
+import { ProjectSelect } from "@/components/projects/project-select";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
 type PasteEmailFormProps = {
@@ -67,11 +67,7 @@ export function PasteEmailForm({ onCreated }: PasteEmailFormProps) {
             className="min-h-56"
             required
           />
-          <Input
-            value={projectId}
-            onChange={(event) => setProjectId(event.target.value)}
-            placeholder="Project ID"
-          />
+          <ProjectSelect value={projectId} onChange={setProjectId} />
           {error ? (
             <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
               {error}
