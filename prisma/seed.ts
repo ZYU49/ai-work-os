@@ -14,9 +14,12 @@ async function main() {
   for (const name of projects) {
     await prisma.project.upsert({
       where: { name },
-      update: {},
+      update: {
+        companyName: name,
+      },
       create: {
         name,
+        companyName: name,
         status: "active",
       },
     });

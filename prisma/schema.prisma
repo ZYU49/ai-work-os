@@ -78,6 +78,7 @@ model User {
 model Project {
   id                 String              @id @default(cuid())
   name               String              @unique
+  companyName        String?
   description        String?
   status             ProjectStatus       @default(active)
   priority           Priority            @default(medium)
