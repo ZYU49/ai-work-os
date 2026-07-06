@@ -1,0 +1,47 @@
+{
+  "name": "ai-work-os",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "node scripts/use-node24.cjs next dev",
+    "build": "node scripts/use-node24.cjs next build",
+    "start": "node scripts/use-node24.cjs next start",
+    "lint": "node scripts/use-node24.cjs eslint .",
+    "test": "node scripts/use-node24.cjs vitest run --passWithNoTests",
+    "test:watch": "node scripts/use-node24.cjs vitest",
+    "test:e2e": "node scripts/use-node24.cjs playwright test",
+    "prisma:generate": "node scripts/use-node24.cjs prisma generate",
+    "prisma:migrate": "node scripts/use-node24.cjs prisma migrate dev",
+    "db:seed": "node scripts/use-node24.cjs tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^7.8.0",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.4.0",
+    "lucide-react": "^1.23.0",
+    "next": "16.2.10",
+    "openai": "^6.45.0",
+    "prisma": "^7.8.0",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "tailwind-merge": "^3.6.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "@tailwindcss/postcss": "^4",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.10",
+    "jsdom": "^29.1.1",
+    "playwright": "^1.61.1",
+    "tailwindcss": "^4",
+    "tsx": "^4.23.0",
+    "typescript": "^5",
+    "vitest": "^4.1.10"
+  }
+}
