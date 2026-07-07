@@ -17,10 +17,13 @@ export async function POST(
 ) {
   try {
     const { id } = await params;
-    const body = await request.json().catch(() => ({}));
+    const body = await request.json();
     const options = midstateCommitSchema.parse(body);
     return Response.json({ summary: await commitMidstateImport(id, options) });
   } catch (error) {
+    if (error instanceof SyntaxError) {
+      return errorResponse("Request body must be valid JSON.", 400);
+    }
     if (error instanceof ZodError) {
       return errorResponse(
         "Midstate import input is invalid.",
