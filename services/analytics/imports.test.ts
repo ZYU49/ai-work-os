@@ -4,6 +4,15 @@ import {
   createSalesImportFromFile,
 } from "@/services/analytics/imports";
 
+const txSalesImportUpdate = vi.fn(async (input) => ({
+  id: input.where.id,
+  ...input.data,
+}));
+const txSalesRecordDeleteMany = vi.fn();
+const txSalesRecordCreateMany = vi.fn(async (input) => ({
+  count: input.data.length,
+}));
+
 vi.mock("node:fs/promises", () => ({
   readFile: vi.fn(async () => Buffer.from("")),
 }));
@@ -26,17 +35,15 @@ vi.mock("@/lib/db", () => ({
       deleteMany: vi.fn(),
     },
     $transaction: vi.fn(async (callback) =>
-      Array.isArray(callback)
-        ? callback
-        : callback({
-            salesImport: {
-              update: vi.fn(async (input) => ({ id: input.where.id, ...input.data })),
-            },
-            salesRecord: {
-              deleteMany: vi.fn(),
-              createMany: vi.fn(async (input) => ({ count: input.data.length })),
-            },
-          }),
+      callback({
+        salesImport: {
+          update: txSalesImportUpdate,
+        },
+        salesRecord: {
+          deleteMany: txSalesRecordDeleteMany,
+          createMany: txSalesRecordCreateMany,
+        },
+      }),
     ),
   },
 }));
@@ -102,6 +109,13 @@ describe("commitSalesImport", () => {
       storagePath: "storage/uploads/sales.xlsx",
       sheetName: "Sales Report by Period",
     } as never);
+    txSalesImportUpdate.mockResolvedValue({
+      id: "import-1",
+      status: "imported",
+    });
+    txSalesRecordCreateMany.mockImplementation(async (input) => ({
+      count: input.data.length,
+    }));
   });
 
   it("imports valid rows and counts rejected rows", async () => {
@@ -121,11 +135,18 @@ describe("commitSalesImport", () => {
       importedRows: 1,
       rejectedRows: 1,
     });
-    expect(prisma.salesRecord.deleteMany).toHaveBeenCalledWith({
+    expect(prisma.$transaction).toHaveBeenCalledWith(
+      expect.any(Function),
+      { maxWait: 10_000, timeout: 120_000 },
+    );
+    expect(prisma.salesRecord.deleteMany).not.toHaveBeenCalled();
+    expect(prisma.salesRecord.createMany).not.toHaveBeenCalled();
+    expect(prisma.salesImport.update).not.toHaveBeenCalled();
+    expect(txSalesRecordDeleteMany).toHaveBeenCalledWith({
       where: { importId: "import-1" },
     });
-    expect(prisma.salesRecord.createMany).toHaveBeenCalledTimes(1);
-    expect(prisma.salesImport.update).toHaveBeenCalledWith(
+    expect(txSalesRecordCreateMany).toHaveBeenCalledTimes(1);
+    expect(txSalesImportUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: "import-1" },
         data: expect.objectContaining({
@@ -156,7 +177,6 @@ describe("commitSalesImport", () => {
   });
 
   it("writes large imports in smaller createMany batches", async () => {
-    const { prisma } = await import("@/lib/db");
     const { rowsFromWorkbook, normalizeSalesRow } = await import(
       "@/services/analytics/parser"
     );
@@ -190,11 +210,63 @@ describe("commitSalesImport", () => {
       revenue: "Total Sales",
     });
 
-    expect(prisma.salesRecord.createMany).toHaveBeenCalledTimes(3);
-    expect(vi.mocked(prisma.salesRecord.createMany).mock.calls.map(([input]) => input.data.length)).toEqual([
+    expect(txSalesRecordCreateMany).toHaveBeenCalledTimes(3);
+    expect(txSalesRecordCreateMany.mock.calls.map(([input]) => input.data.length)).toEqual([
       1000,
       1000,
       501,
     ]);
+  });
+
+  it("rolls back chunked writes when a later batch fails", async () => {
+    const { prisma } = await import("@/lib/db");
+    const { rowsFromWorkbook, normalizeSalesRow } = await import(
+      "@/services/analytics/parser"
+    );
+
+    vi.mocked(rowsFromWorkbook).mockReturnValue(
+      Array.from({ length: 2501 }, (_, index) => ({
+        "Invoice Date": `2026-02-${String((index % 28) + 1).padStart(2, "0")}`,
+        "Customer Name": `Customer ${index}`,
+        Item: `SKU-${index}`,
+        Quantity: "1",
+        "Total Sales": "10",
+      })),
+    );
+    vi.mocked(normalizeSalesRow).mockImplementation((row) => ({
+      ok: true,
+      record: {
+        orderDate: new Date(`${row["Invoice Date"]}T00:00:00`),
+        customerName: String(row["Customer Name"]),
+        sku: String(row.Item),
+        quantity: 1,
+        revenue: 10,
+        unitPrice: 10,
+      },
+    }));
+    txSalesRecordCreateMany
+      .mockResolvedValueOnce({ count: 1000 })
+      .mockRejectedValueOnce(new Error("insert failed"));
+
+    await expect(
+      commitSalesImport("import-1", {
+        orderDate: "Invoice Date",
+        customerName: "Customer Name",
+        sku: "Item",
+        quantity: "Quantity",
+        revenue: "Total Sales",
+      }),
+    ).rejects.toThrow("insert failed");
+
+    expect(prisma.$transaction).toHaveBeenCalledWith(
+      expect.any(Function),
+      { maxWait: 10_000, timeout: 120_000 },
+    );
+    expect(txSalesRecordDeleteMany).toHaveBeenCalledTimes(1);
+    expect(txSalesRecordCreateMany).toHaveBeenCalledTimes(2);
+    expect(txSalesImportUpdate).not.toHaveBeenCalled();
+    expect(prisma.salesRecord.deleteMany).not.toHaveBeenCalled();
+    expect(prisma.salesRecord.createMany).not.toHaveBeenCalled();
+    expect(prisma.salesImport.update).not.toHaveBeenCalled();
   });
 });

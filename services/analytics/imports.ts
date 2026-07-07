@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import type { Prisma } from "@prisma/client";
 import { SalesImportSourceType, SalesImportStatus } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
@@ -38,6 +39,8 @@ export type SalesImportListItem = Awaited<
 >[number];
 
 const SALES_IMPORT_BATCH_SIZE = 1_000;
+const SALES_IMPORT_TRANSACTION_TIMEOUT_MS = 120_000;
+const SALES_IMPORT_TRANSACTION_MAX_WAIT_MS = 10_000;
 
 export const salesMappingSchema = z
   .object(
@@ -153,23 +156,35 @@ export async function commitSalesImport(
     });
   }
 
-  await prisma.salesRecord.deleteMany({ where: { importId } });
-  for (let index = 0; index < records.length; index += SALES_IMPORT_BATCH_SIZE) {
-    await prisma.salesRecord.createMany({
-      data: records.slice(index, index + SALES_IMPORT_BATCH_SIZE),
-    });
-  }
-  await prisma.salesImport.update({
-    where: { id: importId },
-    data: {
-      status: SalesImportStatus.imported,
-      mapping,
-      totalRows: rows.length,
-      importedRows: records.length,
-      rejectedRows,
-      errorMessage: null,
+  await prisma.$transaction(
+    async (tx: Prisma.TransactionClient) => {
+      await tx.salesRecord.deleteMany({ where: { importId } });
+      for (
+        let index = 0;
+        index < records.length;
+        index += SALES_IMPORT_BATCH_SIZE
+      ) {
+        await tx.salesRecord.createMany({
+          data: records.slice(index, index + SALES_IMPORT_BATCH_SIZE),
+        });
+      }
+      await tx.salesImport.update({
+        where: { id: importId },
+        data: {
+          status: SalesImportStatus.imported,
+          mapping,
+          totalRows: rows.length,
+          importedRows: records.length,
+          rejectedRows,
+          errorMessage: null,
+        },
+      });
     },
-  });
+    {
+      timeout: SALES_IMPORT_TRANSACTION_TIMEOUT_MS,
+      maxWait: SALES_IMPORT_TRANSACTION_MAX_WAIT_MS,
+    },
+  );
 
   return {
     importId,
