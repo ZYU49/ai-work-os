@@ -99,6 +99,17 @@ function parseSheetRows(sheet: WorkSheet) {
   );
 }
 
+function parseSheetHeaders(sheet: WorkSheet) {
+  const [headerRow = []] = utils.sheet_to_json<unknown[]>(sheet, {
+    header: 1,
+    defval: null,
+    raw: false,
+  });
+  return headerRow
+    .map((value) => textValue(value))
+    .filter((value): value is string => Boolean(value));
+}
+
 function validateHeaders(headers: string[]) {
   const missing = midstateRequiredHeaders.filter(
     (header) => !headers.includes(header),
@@ -197,8 +208,8 @@ export function extractMidstatePreview(input: {
   if (!sheet) {
     throw new Error("Midstate workbook must include a RAW DATA sheet.");
   }
+  const headers = parseSheetHeaders(sheet);
   const rows = parseSheetRows(sheet);
-  const headers = rows.length > 0 ? Object.keys(rows[0]) : [];
   validateHeaders(headers);
 
   const normalized = rows.map(normalizeMidstateRow);

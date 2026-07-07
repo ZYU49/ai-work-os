@@ -78,6 +78,21 @@ describe("midstate parser", () => {
     expect(preview.vendorNumber).toBe("1001718");
   });
 
+  test("validates RAW DATA headers when the sheet has no data rows", () => {
+    const buffer = workbookBuffer([headers]);
+
+    const preview = extractMidstatePreview({
+      buffer,
+      fileName: "1001718 Empty 2026.xlsx",
+    });
+
+    expect(preview.headers).toEqual(headers);
+    expect(preview.totalRows).toBe(0);
+    expect(preview.totalQuantity).toBe(0);
+    expect(preview.memberCount).toBe(0);
+    expect(preview.skuCount).toBe(0);
+  });
+
   test("requires the RAW DATA worksheet", () => {
     const buffer = workbookBuffer([headers], "Sheet1");
 
