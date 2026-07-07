@@ -1,5 +1,10 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "../../lib/db";
+import {
+  getSalesAnalytics as readSalesAnalytics,
+  type SalesAnalyticsFilters,
+  type SalesAnalyticsOverview,
+} from "../analytics/metrics";
 import { getDailyLogContext } from "../daily-log";
 import { getDashboardOverview } from "../dashboard";
 
@@ -575,6 +580,12 @@ export async function getDailyLogContextForAgent(
   };
 }
 
+export async function getSalesAnalytics(
+  filters: SalesAnalyticsFilters = { year: new Date().getFullYear() },
+): Promise<SalesAnalyticsOverview> {
+  return readSalesAnalytics(filters);
+}
+
 export const agentTools = {
   getTodayOverview,
   getProjectSummary,
@@ -583,6 +594,7 @@ export const agentTools = {
   getDueTasks,
   getOpenFollowUps,
   getDailyLogContextForAgent,
+  getSalesAnalytics,
   resolveProjectReference,
 };
 

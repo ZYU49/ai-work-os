@@ -1,10 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
+import { getSalesAnalytics as readSalesAnalytics } from "../analytics/metrics";
 import {
   getDueTasks,
+  getSalesAnalytics,
   getProjectSummary,
   searchEmails,
   searchProjects,
 } from "./tools";
+
+vi.mock("../analytics/metrics", () => ({
+  getSalesAnalytics: vi.fn(),
+}));
 
 const now = new Date("2026-07-06T15:00:00.000Z");
 
@@ -147,5 +153,37 @@ describe("agent safe tools", () => {
     expect(client.email.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ take: 8 }),
     );
+  });
+
+  it("reads sales analytics through the read-only agent boundary", async () => {
+    vi.mocked(readSalesAnalytics).mockResolvedValue({
+      kpis: {
+        ytdQuantity: 711090,
+        ytdRevenue: 21365036,
+        averageUnitPrice: 30.04,
+        activeCustomers: 27,
+      },
+      monthly: [],
+      topCustomers: [{ name: "TRACTOR SUPPLY COMPANY", quantity: 375957, revenue: 0 }],
+      topCategories: [{ name: "L&G Tires", quantity: 164237, revenue: 0 }],
+      topSkus: [{ name: "WD1030", quantity: 23571, revenue: 0 }],
+      salespeople: [],
+      states: [],
+      filterOptions: {
+        years: [],
+        salespeople: [],
+        customers: [],
+        categories: [],
+        skus: [],
+        states: [],
+        members: [],
+      },
+    });
+
+    const analytics = await getSalesAnalytics({ year: 2026 });
+
+    expect(readSalesAnalytics).toHaveBeenCalledWith({ year: 2026 });
+    expect(analytics.kpis.ytdQuantity).toBe(711090);
+    expect(analytics.topCustomers[0]?.name).toBe("TRACTOR SUPPLY COMPANY");
   });
 });

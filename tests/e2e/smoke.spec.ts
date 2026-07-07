@@ -114,6 +114,7 @@ test("core MVP pages render from the app shell", async ({ page }) => {
     "**/api/notes**",
     "**/api/tasks**",
     "**/api/daily-log**",
+    "**/api/analytics/sales**",
   ];
 
   for (const url of unavailableApiRoutes) {
@@ -149,4 +150,20 @@ test("core MVP pages render from the app shell", async ({ page }) => {
     await waitForLoadingToFinish(page, appPage.loadingText);
     await expectAnyFinalState(appPage.name, appPage.finalStates(page));
   }
+
+  await page.goto("/analytics");
+  await expect(
+    page.getByRole("heading", { name: "Sales Analytics", level: 1 }),
+  ).toBeVisible();
+  await waitForLoadingToFinish(page, ["Loading sales analytics"]);
+  await expectAnyFinalState("Analytics", [
+    page.getByText("YTD Quantity"),
+    page.getByText("Unable to load sales analytics"),
+    page.getByText("No monthly sales data yet"),
+  ]);
+
+  await page.goto("/analytics/import");
+  await expect(
+    page.getByRole("heading", { name: "Import Sales Data", level: 1 }),
+  ).toBeVisible();
 });
