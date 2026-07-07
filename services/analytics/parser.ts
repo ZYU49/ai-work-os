@@ -1,4 +1,4 @@
-import { read, utils } from "xlsx";
+import { read, utils, type WorkSheet } from "xlsx";
 
 import {
   salesFieldDefinitions,
@@ -124,7 +124,7 @@ function uniqueHeaders(values: unknown[]) {
   });
 }
 
-function parseSheetRows(sheet: utils.WorkSheet): ParsedWorkbookRows {
+function parseSheetRows(sheet: WorkSheet): ParsedWorkbookRows {
   const matrix = utils.sheet_to_json<unknown[]>(sheet, {
     header: 1,
     defval: null,

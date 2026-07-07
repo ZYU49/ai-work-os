@@ -19,13 +19,16 @@ describe("Sidebar", () => {
     usePathnameMock.mockReset();
   });
 
-  test("shows the sales import link and marks it active on the import route", () => {
+  test("shows analytics in navigation and marks it active for analytics routes", () => {
     usePathnameMock.mockReturnValue("/analytics/import");
 
     render(<Sidebar />);
 
-    const link = screen.getByRole("link", { name: /sales import/i });
-    expect(link).toHaveAttribute("href", "/analytics/import");
+    const link = screen.getByRole("link", { name: /analytics/i });
+    expect(link).toHaveAttribute("href", "/analytics");
     expect(link).toHaveAttribute("aria-current", "page");
+    expect(
+      screen.queryByRole("link", { name: /sales import/i }),
+    ).not.toBeInTheDocument();
   });
 });

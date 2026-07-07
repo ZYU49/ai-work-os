@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  BarChart3,
   Bot,
   CalendarDays,
   CheckSquare,
@@ -13,20 +14,19 @@ import {
   Search,
   Settings,
   StickyNote,
-  UploadCloud,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Projects", href: "/projects", icon: FolderKanban },
+  { label: "Analytics", href: "/analytics", icon: BarChart3 },
   { label: "Mail", href: "/mail", icon: Inbox },
   { label: "Files", href: "/files", icon: FileText },
   { label: "Notes", href: "/notes", icon: StickyNote },
   { label: "Tasks", href: "/tasks", icon: CheckSquare },
   { label: "Daily Log", href: "/daily-log", icon: CalendarDays },
   { label: "Search", href: "/search", icon: Search },
-  { label: "Sales Import", href: "/analytics/import", icon: UploadCloud },
   { label: "Agent", href: "/agent", icon: Bot },
   { label: "Settings", href: "/settings", icon: Settings },
 ];

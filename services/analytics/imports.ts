@@ -10,6 +10,7 @@ import {
   type SalesFieldMapping,
 } from "@/services/analytics/fields";
 import {
+  type NormalizedSalesRecord,
   extractWorkbookPreview,
   normalizeSalesRow,
   rowsFromWorkbook,
@@ -135,11 +136,7 @@ export async function commitSalesImport(
     await readFile(salesImport.storagePath),
     salesImport.sheetName ?? undefined,
   );
-  const records: Array<{ importId: string } & ReturnType<
-    typeof normalizeSalesRow
-  > extends { ok: true; record: infer T }
-    ? T
-    : never> = [];
+  const records: Array<{ importId: string } & NormalizedSalesRecord> = [];
   let rejectedRows = 0;
 
   for (const row of rows) {
