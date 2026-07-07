@@ -60,6 +60,18 @@ enum FollowUpStatus {
   done
 }
 
+enum SalesImportStatus {
+  uploaded
+  mapped
+  imported
+  failed
+}
+
+enum SalesImportSourceType {
+  excel
+  csv
+}
+
 model User {
   id                 String              @id @default(cuid())
   email              String              @unique
@@ -166,6 +178,59 @@ model FileAsset {
   project     Project?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
 
   @@index([projectId])
+}
+
+model SalesImport {
+  id           String                @id @default(cuid())
+  fileName     String
+  storagePath  String
+  sourceType   SalesImportSourceType
+  sheetName    String?
+  status       SalesImportStatus     @default(uploaded)
+  mapping      Json?
+  totalRows    Int                   @default(0)
+  importedRows Int                   @default(0)
+  rejectedRows Int                   @default(0)
+  errorMessage String?
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+  records      SalesRecord[]
+
+  @@index([createdAt])
+  @@index([status])
+}
+
+model SalesRecord {
+  id             String      @id @default(cuid())
+  importId       String
+  orderDate      DateTime
+  invoiceNumber  String?
+  customerCode   String?
+  customerName   String
+  customerPo     String?
+  sku            String
+  productName    String?
+  category       String?
+  salesperson    String?
+  shipToState    String?
+  shipToCity     String?
+  warehouse      String?
+  shipmentNumber String?
+  shipToCode     String?
+  memberName     String?
+  quantity       Decimal     @db.Decimal(18, 4)
+  revenue        Decimal     @db.Decimal(18, 4)
+  unitPrice      Decimal?    @db.Decimal(18, 4)
+  createdAt      DateTime    @default(now())
+  import         SalesImport @relation(fields: [importId], references: [id], onDelete: Cascade)
+
+  @@index([orderDate])
+  @@index([customerName])
+  @@index([sku])
+  @@index([category])
+  @@index([salesperson])
+  @@index([memberName])
+  @@index([shipToState])
 }
 
 model Note {
