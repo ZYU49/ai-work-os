@@ -36,6 +36,11 @@ export type NormalizedMidstateRow =
   | { ok: true; record: NormalizedMidstateRecord }
   | { ok: false; errors: string[] };
 
+type MidstatePeriod = {
+  periodYear: number | null;
+  periodMonth: number | null;
+};
+
 export const MIDSTATE_RAW_DATA_SHEET = "RAW DATA";
 export const midstateRequiredHeaders = [
   "Vendor Name",
@@ -125,16 +130,96 @@ function isoDate(date: Date | null) {
   return date ? date.toISOString().slice(0, 10) : null;
 }
 
-function periodFromDates(dates: Date[]) {
-  if (dates.length === 0) return { periodYear: null, periodMonth: null };
-  const counts = new Map<string, number>();
-  for (const date of dates) {
-    const key = `${date.getFullYear()}-${date.getMonth() + 1}`;
-    counts.set(key, (counts.get(key) ?? 0) + 1);
+const monthNumberByName = new Map(
+  [
+    ["jan", 1],
+    ["january", 1],
+    ["feb", 2],
+    ["february", 2],
+    ["mar", 3],
+    ["march", 3],
+    ["apr", 4],
+    ["april", 4],
+    ["may", 5],
+    ["jun", 6],
+    ["june", 6],
+    ["jul", 7],
+    ["july", 7],
+    ["aug", 8],
+    ["august", 8],
+    ["sep", 9],
+    ["sept", 9],
+    ["september", 9],
+    ["oct", 10],
+    ["october", 10],
+    ["nov", 11],
+    ["november", 11],
+    ["dec", 12],
+    ["december", 12],
+  ] as const,
+);
+
+function periodFromFileName(fileName: string): MidstatePeriod {
+  const tokens = fileName.toLowerCase().match(/[a-z]+|\d+/g) ?? [];
+  const periodMonth = tokens
+    .map((token) => monthNumberByName.get(token))
+    .find((month): month is number => month !== undefined);
+  const periodYear = tokens
+    .filter((token) => /^\d{4}$/.test(token))
+    .map((token) => Number(token))
+    .find((year) => year >= 1900 && year <= 2100);
+
+  if (!periodMonth || !periodYear) {
+    return { periodYear: null, periodMonth: null };
   }
-  const [key] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
-  const [year, month] = key.split("-").map(Number);
-  return { periodYear: year, periodMonth: month };
+
+  return { periodYear, periodMonth };
+}
+
+function latestPeriodFromDates(dates: Date[]): MidstatePeriod {
+  if (dates.length === 0) return { periodYear: null, periodMonth: null };
+  const latest = [...dates].sort((a, b) => b.getTime() - a.getTime())[0];
+  return {
+    periodYear: latest.getFullYear(),
+    periodMonth: latest.getMonth() + 1,
+  };
+}
+
+function rowPostDate(row: Record<string, unknown>) {
+  return dateValue(row["Post Date"]);
+}
+
+function dateIsInPeriod(date: Date | null, period: MidstatePeriod) {
+  return (
+    date !== null &&
+    period.periodYear !== null &&
+    period.periodMonth !== null &&
+    date.getFullYear() === period.periodYear &&
+    date.getMonth() + 1 === period.periodMonth
+  );
+}
+
+function targetPeriodForRows(
+  rows: Record<string, unknown>[],
+  fileName: string,
+): MidstatePeriod {
+  const filePeriod = periodFromFileName(fileName);
+  if (filePeriod.periodYear !== null && filePeriod.periodMonth !== null) {
+    return filePeriod;
+  }
+
+  return latestPeriodFromDates(
+    rows
+      .map(rowPostDate)
+      .filter((date): date is Date => date !== null),
+  );
+}
+
+export function filterMidstateRowsForPeriod(
+  rows: Record<string, unknown>[],
+  period: MidstatePeriod,
+) {
+  return rows.filter((row) => dateIsInPeriod(rowPostDate(row), period));
 }
 
 export function rowsFromMidstateWorkbook(
@@ -212,7 +297,12 @@ export function extractMidstatePreview(input: {
   const rows = parseSheetRows(sheet);
   validateHeaders(headers);
 
-  const normalized = rows.map(normalizeMidstateRow);
+  const { periodYear, periodMonth } = targetPeriodForRows(rows, input.fileName);
+  const targetRows = filterMidstateRowsForPeriod(rows, {
+    periodYear,
+    periodMonth,
+  });
+  const normalized = targetRows.map(normalizeMidstateRow);
   const valid = normalized.flatMap((row) => (row.ok ? [row.record] : []));
   const totalQuantity = valid.reduce((sum, row) => sum + row.quantity, 0);
   const warehouseQuantity = valid
@@ -224,13 +314,12 @@ export function extractMidstatePreview(input: {
   const dates = valid
     .map((row) => row.postDate)
     .sort((a, b) => a.getTime() - b.getTime());
-  const { periodYear, periodMonth } = periodFromDates(dates);
 
   return {
     sheetName: MIDSTATE_RAW_DATA_SHEET,
     headers,
-    previewRows: rows.slice(0, 10),
-    totalRows: rows.length,
+    previewRows: targetRows.slice(0, 10),
+    totalRows: targetRows.length,
     totalQuantity,
     warehouseQuantity,
     directQuantity,

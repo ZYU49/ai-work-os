@@ -78,6 +78,135 @@ describe("midstate parser", () => {
     expect(preview.vendorNumber).toBe("1001718");
   });
 
+  test("extracts a May file preview from only May rows when RAW DATA rolls across months", () => {
+    const buffer = workbookBuffer([
+      headers,
+      [
+        "Sutong",
+        10047918,
+        "Prior year SKU",
+        "OLD2025",
+        "Prior Member",
+        "2025",
+        "1001718",
+        "Warehouse",
+        100,
+        new Date(2025, 5, 2),
+        1,
+        100,
+      ],
+      [
+        "Sutong",
+        10047919,
+        "Prior month SKU",
+        "APR2026",
+        "April Member",
+        "42026",
+        "1001718",
+        "Warehouse",
+        50,
+        new Date(2026, 3, 30),
+        1,
+        50,
+      ],
+      [
+        "Sutong",
+        10047920,
+        "May warehouse SKU",
+        "MAY-WH",
+        "May Member A",
+        "52026A",
+        "1001718",
+        "Warehouse",
+        3,
+        new Date(2026, 4, 1),
+        1,
+        3,
+      ],
+      [
+        "Sutong",
+        10047921,
+        "May direct SKU",
+        "MAY-DIR",
+        "May Member B",
+        "52026B",
+        "1001718",
+        "Direct",
+        2,
+        new Date(2026, 4, 30),
+        1,
+        2,
+      ],
+    ]);
+
+    const preview = extractMidstatePreview({
+      buffer,
+      fileName: "1001718 May 2026.xlsx",
+    });
+
+    expect(preview.totalRows).toBe(2);
+    expect(preview.totalQuantity).toBe(5);
+    expect(preview.warehouseQuantity).toBe(3);
+    expect(preview.directQuantity).toBe(2);
+    expect(preview.memberCount).toBe(2);
+    expect(preview.skuCount).toBe(2);
+    expect(preview.dateRange).toEqual({
+      start: "2026-05-01",
+      end: "2026-05-30",
+    });
+    expect(preview.periodYear).toBe(2026);
+    expect(preview.periodMonth).toBe(5);
+    expect(preview.previewRows.map((row) => row.VIN)).toEqual([
+      "MAY-WH",
+      "MAY-DIR",
+    ]);
+  });
+
+  test("falls back to the latest valid Post Date month when filename has no period", () => {
+    const buffer = workbookBuffer([
+      headers,
+      ...Array.from({ length: 3 }, (_, index) => [
+        "Sutong",
+        10047918 + index,
+        "April SKU",
+        `APR-${index}`,
+        `April Member ${index}`,
+        `4${index}`,
+        "1001718",
+        "Warehouse",
+        10,
+        new Date(2026, 3, index + 1),
+        1,
+        10,
+      ]),
+      [
+        "Sutong",
+        10047921,
+        "May SKU",
+        "MAY-LATEST",
+        "May Member",
+        "5",
+        "1001718",
+        "Direct",
+        2,
+        new Date(2026, 4, 1),
+        1,
+        2,
+      ],
+    ]);
+
+    const preview = extractMidstatePreview({
+      buffer,
+      fileName: "midstate rolling export.xlsx",
+    });
+
+    expect(preview.periodYear).toBe(2026);
+    expect(preview.periodMonth).toBe(5);
+    expect(preview.totalRows).toBe(1);
+    expect(preview.totalQuantity).toBe(2);
+    expect(preview.previewRows.map((row) => row.VIN)).toEqual(["MAY-LATEST"]);
+  });
+
   test("validates RAW DATA headers when the sheet has no data rows", () => {
     const buffer = workbookBuffer([headers]);
 

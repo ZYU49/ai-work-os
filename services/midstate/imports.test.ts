@@ -188,6 +188,59 @@ describe("midstate imports", () => {
     });
   });
 
+  test("commits only rows for the persisted Midstate import period", async () => {
+    vi.mocked(rowsFromMidstateWorkbook).mockReturnValue([
+      validMidstateRow({
+        VIN: "OLD2025",
+        "Member Number": "2025",
+        "Qty Shipped": 100,
+        "Post Date": new Date("2025-06-02T00:00:00"),
+      }),
+      validMidstateRow({
+        VIN: "APR2026",
+        "Member Number": "42026",
+        "Qty Shipped": 50,
+        "Post Date": new Date("2026-04-30T00:00:00"),
+      }),
+      validMidstateRow({
+        VIN: "MAY-WH",
+        "Member Number": "52026A",
+        "Order Class": "Warehouse",
+        "Qty Shipped": 3,
+        "Post Date": new Date("2026-05-01T00:00:00"),
+      }),
+      validMidstateRow({
+        VIN: "MAY-DIR",
+        "Member Number": "52026B",
+        "Order Class": "Direct",
+        "Qty Shipped": 2,
+        "Post Date": new Date("2026-05-30T00:00:00"),
+      }),
+    ]);
+
+    const result = await commitMidstateImport("import-1");
+
+    expect(result).toMatchObject({
+      totalRows: 2,
+      importedRows: 2,
+      rejectedRows: 0,
+    });
+    expect(prisma.midstateSellThroughRecord.createMany).toHaveBeenCalledWith({
+      data: [
+        expect.objectContaining({ sku: "MAY-WH", quantity: 3 }),
+        expect.objectContaining({ sku: "MAY-DIR", quantity: 2 }),
+      ],
+    });
+    expect(prisma.midstateImport.update).toHaveBeenCalledWith({
+      where: { id: "import-1" },
+      data: expect.objectContaining({
+        totalRows: 2,
+        importedRows: 2,
+        rejectedRows: 0,
+      }),
+    });
+  });
+
   test("deletes previous imported periods when replacement is confirmed", async () => {
     vi.mocked(prisma.midstateImport.findMany).mockResolvedValue([
       { id: "old-import-1" },

@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { deleteStoredFile, saveUploadedFile } from "@/lib/storage";
 import {
   extractMidstatePreview,
+  filterMidstateRowsForPeriod,
   normalizeMidstateRow,
   rowsFromMidstateWorkbook,
   type MidstateWorkbookPreview,
@@ -143,11 +144,15 @@ export async function commitMidstateImport(
     await readFile(midstateImport.storagePath),
     midstateImport.sheetName ?? undefined,
   );
+  const targetRows = filterMidstateRowsForPeriod(rows, {
+    periodYear: midstateImport.periodYear,
+    periodMonth: midstateImport.periodMonth,
+  });
   const records: Array<{ importId: string } & NormalizedMidstateRecord> = [];
   const errors: string[] = [];
   let rejectedRows = 0;
 
-  rows.forEach((row, index) => {
+  targetRows.forEach((row, index) => {
     const normalized = normalizeMidstateRow(row);
     if (!normalized.ok) {
       rejectedRows += 1;
@@ -184,7 +189,7 @@ export async function commitMidstateImport(
         where: { id: importId },
         data: {
           status: MidstateImportStatus.imported,
-          totalRows: rows.length,
+          totalRows: targetRows.length,
           importedRows: records.length,
           rejectedRows,
           errorMessage: errors.length > 0 ? errors.slice(0, 10).join("\n") : null,
@@ -199,7 +204,7 @@ export async function commitMidstateImport(
 
   return {
     importId,
-    totalRows: rows.length,
+    totalRows: targetRows.length,
     importedRows: records.length,
     rejectedRows,
     replacedImports: existingImports.length,
