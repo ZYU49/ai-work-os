@@ -13,6 +13,7 @@ import {
   Search,
   Settings,
   StickyNote,
+  UploadCloud,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -25,6 +26,7 @@ const navItems = [
   { label: "Tasks", href: "/tasks", icon: CheckSquare },
   { label: "Daily Log", href: "/daily-log", icon: CalendarDays },
   { label: "Search", href: "/search", icon: Search },
+  { label: "Sales Import", href: "/analytics/import", icon: UploadCloud },
   { label: "Agent", href: "/agent", icon: Bot },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
