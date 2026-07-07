@@ -131,6 +131,41 @@ describe("sales parser", () => {
     }
   });
 
+  it("parses date-only strings into stable local calendar dates", () => {
+    const firstDayRow = normalizeSalesRow(
+      {
+        "Invoice Date": "2026-01-01",
+        "Customer Name": "Acme Tire",
+        Item: "SKU-1",
+        Quantity: "1",
+        "Total Sales": "100",
+      },
+      mapping,
+    );
+    const firstOfMonthCsvRow = normalizeSalesRow(
+      {
+        "Invoice Date": "2026/02/01",
+        "Customer Name": "Beta Tire",
+        Item: "SKU-2",
+        Quantity: "2",
+        "Total Sales": "240",
+      },
+      mapping,
+    );
+
+    expect(firstDayRow.ok).toBe(true);
+    expect(firstOfMonthCsvRow.ok).toBe(true);
+
+    if (firstDayRow.ok && firstOfMonthCsvRow.ok) {
+      expect(firstDayRow.record.orderDate.getFullYear()).toBe(2026);
+      expect(firstDayRow.record.orderDate.getMonth()).toBe(0);
+      expect(firstDayRow.record.orderDate.getDate()).toBe(1);
+      expect(firstOfMonthCsvRow.record.orderDate.getFullYear()).toBe(2026);
+      expect(firstOfMonthCsvRow.record.orderDate.getMonth()).toBe(1);
+      expect(firstOfMonthCsvRow.record.orderDate.getDate()).toBe(1);
+    }
+  });
+
   it("rejects rows with invalid required values", () => {
     const row = normalizeSalesRow(
       {

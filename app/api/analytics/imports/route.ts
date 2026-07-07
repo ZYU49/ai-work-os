@@ -60,6 +60,18 @@ function isStorageError(error: unknown) {
   );
 }
 
+function isUploadValidationError(error: unknown) {
+  return (
+    error instanceof Error &&
+    [
+      "Upload an Excel or CSV file.",
+      "Workbook has no readable sheets.",
+      "Workbook sheet is not readable.",
+      "File could not be read as Excel or CSV.",
+    ].includes(error.message)
+  );
+}
+
 export async function GET() {
   try {
     return Response.json({ imports: await listSalesImports() });
@@ -108,7 +120,7 @@ export async function POST(request: Request) {
       return errorResponse("Request must be multipart form data.", 400);
     }
 
-    if (error instanceof Error && error.message === "Upload an Excel or CSV file.") {
+    if (isUploadValidationError(error)) {
       return errorResponse(error.message, 400);
     }
 

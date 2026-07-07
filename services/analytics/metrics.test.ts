@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   calculateGrowth,
+  salesAnalyticsFiltersSchema,
   summarizeSalesRowsForTest,
 } from "@/services/analytics/metrics";
 
@@ -121,5 +122,81 @@ describe("sales metrics", () => {
     expect(summary.filterOptions.customers).toEqual(["A", "B"]);
     expect(summary.filterOptions.categories).toEqual(["L&G", "Tube"]);
     expect(summary.filterOptions.skus).toEqual(["SKU-1", "SKU-2"]);
+  });
+
+  it("includes January 1 rows in the selected year and applies month range filters", () => {
+    const summary = summarizeSalesRowsForTest(
+      [
+        {
+          orderDate: new Date(2026, 0, 1),
+          customerName: "A",
+          sku: "SKU-1",
+          category: "L&G",
+          salesperson: "Bella Cui",
+          quantity: 25,
+          revenue: 250,
+        },
+        {
+          orderDate: new Date(2026, 1, 1),
+          customerName: "B",
+          sku: "SKU-2",
+          category: "Tube",
+          salesperson: "Allen Meng",
+          quantity: 30,
+          revenue: 360,
+        },
+        {
+          orderDate: new Date(2025, 1, 1),
+          customerName: "B",
+          sku: "SKU-2",
+          category: "Tube",
+          salesperson: "Allen Meng",
+          quantity: 20,
+          revenue: 200,
+        },
+      ],
+      { year: 2026, startMonth: 1, endMonth: 2 },
+    );
+
+    expect(summary.kpis.ytdQuantity).toBe(55);
+    expect(summary.monthly).toEqual([
+      expect.objectContaining({
+        month: "2026-01",
+        quantity: 25,
+      }),
+      expect.objectContaining({
+        month: "2026-02",
+        quantity: 30,
+        yoyQuantityGrowth: 0.5,
+      }),
+    ]);
+  });
+
+  it("limits ytd totals and monthly buckets to the selected month range", () => {
+    const summary = summarizeSalesRowsForTest(rows, {
+      year: 2026,
+      startMonth: 2,
+      endMonth: 2,
+    });
+
+    expect(summary.kpis.ytdQuantity).toBe(150);
+    expect(summary.kpis.ytdRevenue).toBe(1800);
+    expect(summary.monthly).toEqual([
+      expect.objectContaining({
+        month: "2026-02",
+        quantity: 150,
+        revenue: 1800,
+      }),
+    ]);
+  });
+
+  it("rejects month ranges where start month is after end month", () => {
+    expect(() =>
+      salesAnalyticsFiltersSchema.parse({
+        year: "2026",
+        startMonth: "11",
+        endMonth: "3",
+      }),
+    ).toThrow();
   });
 });

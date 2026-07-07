@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 
 export type SalesDashboardFilters = {
   year: string;
+  startMonth: string;
+  endMonth: string;
   salesperson: string;
   customerName: string;
   category: string;
@@ -22,6 +24,21 @@ export type SalesFilterOptions = {
   members: string[];
 };
 
+const monthOptions = [
+  { value: "1", label: "Jan" },
+  { value: "2", label: "Feb" },
+  { value: "3", label: "Mar" },
+  { value: "4", label: "Apr" },
+  { value: "5", label: "May" },
+  { value: "6", label: "Jun" },
+  { value: "7", label: "Jul" },
+  { value: "8", label: "Aug" },
+  { value: "9", label: "Sep" },
+  { value: "10", label: "Oct" },
+  { value: "11", label: "Nov" },
+  { value: "12", label: "Dec" },
+] as const;
+
 function SelectFilter({
   label,
   value,
@@ -30,7 +47,7 @@ function SelectFilter({
 }: {
   label: string;
   value: string;
-  options: string[];
+  options: Array<string | { value: string; label: string }>;
   onChange: (value: string) => void;
 }) {
   return (
@@ -43,8 +60,11 @@ function SelectFilter({
       >
         <option value="">All</option>
         {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
+          <option
+            key={typeof option === "string" ? option : option.value}
+            value={typeof option === "string" ? option : option.value}
+          >
+            {typeof option === "string" ? option : option.label}
           </option>
         ))}
       </select>
@@ -74,6 +94,18 @@ export function SalesFilters({
         value={filters.year}
         options={options.years}
         onChange={(value) => setFilter("year", value)}
+      />
+      <SelectFilter
+        label="Start Month"
+        value={filters.startMonth}
+        options={monthOptions}
+        onChange={(value) => setFilter("startMonth", value)}
+      />
+      <SelectFilter
+        label="End Month"
+        value={filters.endMonth}
+        options={monthOptions}
+        onChange={(value) => setFilter("endMonth", value)}
       />
       <SelectFilter
         label="Salesperson"

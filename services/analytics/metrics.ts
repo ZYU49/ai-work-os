@@ -1,15 +1,30 @@
 import type { SalesRecord } from "@prisma/client";
 import { z } from "zod";
 
-export const salesAnalyticsFiltersSchema = z.object({
-  year: z.coerce.number().int().min(2000).max(2100).optional(),
-  salesperson: z.string().trim().optional(),
-  customerName: z.string().trim().optional(),
-  category: z.string().trim().optional(),
-  sku: z.string().trim().optional(),
-  shipToState: z.string().trim().optional(),
-  memberName: z.string().trim().optional(),
-});
+export const salesAnalyticsFiltersSchema = z
+  .object({
+    year: z.coerce.number().int().min(2000).max(2100).optional(),
+    startMonth: z.coerce.number().int().min(1).max(12).optional(),
+    endMonth: z.coerce.number().int().min(1).max(12).optional(),
+    salesperson: z.string().trim().optional(),
+    customerName: z.string().trim().optional(),
+    category: z.string().trim().optional(),
+    sku: z.string().trim().optional(),
+    shipToState: z.string().trim().optional(),
+    memberName: z.string().trim().optional(),
+  })
+  .superRefine((filters, context) => {
+    const startMonth = filters.startMonth ?? 1;
+    const endMonth = filters.endMonth ?? 12;
+
+    if (startMonth > endMonth) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["startMonth"],
+        message: "Start month must be before or equal to end month.",
+      });
+    }
+  });
 
 export type SalesAnalyticsFilters = z.infer<typeof salesAnalyticsFiltersSchema>;
 
@@ -131,14 +146,34 @@ function unique(values: Array<string | null | undefined>) {
     .sort((a, b) => a.localeCompare(b));
 }
 
+function monthInRange(month: number, startMonth: number, endMonth: number) {
+  return month >= startMonth && month <= endMonth;
+}
+
+function monthRange(filters: SalesAnalyticsFilters) {
+  return {
+    startMonth: filters.startMonth ?? 1,
+    endMonth: filters.endMonth ?? 12,
+  };
+}
+
 export function summarizeSalesRowsForTest(
   rows: SalesMetricRow[],
   filters: SalesAnalyticsFilters,
   filterOptionRows: SalesMetricRow[] = rows,
 ): SalesAnalyticsOverview {
   const year = filters.year ?? new Date().getFullYear();
-  const currentRows = rows.filter((row) => row.orderDate.getFullYear() === year);
-  const priorRows = rows.filter((row) => row.orderDate.getFullYear() === year - 1);
+  const { startMonth, endMonth } = monthRange(filters);
+  const currentRows = rows.filter(
+    (row) =>
+      row.orderDate.getFullYear() === year &&
+      monthInRange(row.orderDate.getMonth() + 1, startMonth, endMonth),
+  );
+  const priorRows = rows.filter(
+    (row) =>
+      row.orderDate.getFullYear() === year - 1 &&
+      monthInRange(row.orderDate.getMonth() + 1, startMonth, endMonth),
+  );
   const monthlyMap = new Map<string, { quantity: number; revenue: number }>();
   const priorMonthlyMap = new Map<string, { quantity: number; revenue: number }>();
   const customers = new Map<string, { quantity: number; revenue: number }>();
@@ -243,10 +278,11 @@ export async function getSalesAnalytics(
   filters: SalesAnalyticsFilters,
 ): Promise<SalesAnalyticsOverview> {
   const year = filters.year ?? new Date().getFullYear();
+  const { startMonth, endMonth } = monthRange(filters);
   const { prisma } = await import("@/lib/db");
   const dateWhere = {
-    gte: new Date(`${year - 1}-01-01T00:00:00`),
-    lt: new Date(`${year + 1}-01-01T00:00:00`),
+    gte: new Date(year - 1, startMonth - 1, 1),
+    lt: new Date(year, endMonth, 1),
   };
   const select: SalesMetricRowSelection = {
     orderDate: true,

@@ -44,6 +44,9 @@ type ParsedWorkbookRows = {
   rows: Record<string, unknown>[];
 };
 
+const DATE_ONLY_PATTERN = /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/;
+const INVALID_WORKBOOK_ERROR = "File could not be read as Excel or CSV.";
+
 function textValue(value: unknown) {
   if (value === null || value === undefined) {
     return undefined;
@@ -83,8 +86,31 @@ function dateValue(value: unknown) {
     return null;
   }
 
+  const dateOnlyMatch = DATE_ONLY_PATTERN.exec(text);
+  if (dateOnlyMatch) {
+    const [, yearText, monthText, dayText] = dateOnlyMatch;
+    const year = Number(yearText);
+    const month = Number(monthText);
+    const day = Number(dayText);
+    const date = new Date(year, month - 1, day);
+
+    return date.getFullYear() === year &&
+      date.getMonth() === month - 1 &&
+      date.getDate() === day
+      ? date
+      : null;
+  }
+
   const date = new Date(text);
   return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function readWorkbook(buffer: Buffer) {
+  try {
+    return read(buffer, { type: "buffer", cellDates: true });
+  } catch {
+    throw new Error(INVALID_WORKBOOK_ERROR);
+  }
 }
 
 function sourceValue(
@@ -155,7 +181,7 @@ export function extractWorkbookPreview(input: {
   fileName: string;
   mimeType?: string;
 }): WorkbookPreview {
-  const workbook = read(input.buffer, { type: "buffer", cellDates: true });
+  const workbook = readWorkbook(input.buffer);
   const sheetName = workbook.SheetNames[0];
 
   if (!sheetName) {
@@ -174,7 +200,7 @@ export function extractWorkbookPreview(input: {
 }
 
 export function rowsFromWorkbook(buffer: Buffer, sheetName?: string) {
-  const workbook = read(buffer, { type: "buffer", cellDates: true });
+  const workbook = readWorkbook(buffer);
   const targetSheetName = sheetName ?? workbook.SheetNames[0];
 
   if (!targetSheetName || !workbook.Sheets[targetSheetName]) {

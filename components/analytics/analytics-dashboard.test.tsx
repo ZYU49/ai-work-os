@@ -42,7 +42,9 @@ function createAnalyticsResponse(quantity: number, customerName = "Acme Tire") {
           quantity,
           revenue: quantity * 100,
           momQuantityGrowth: null,
+          momRevenueGrowth: null,
           yoyQuantityGrowth: 0.1,
+          yoyRevenueGrowth: 0.15,
         },
       ],
       topCustomers: [
@@ -89,14 +91,18 @@ describe("AnalyticsDashboard", () => {
               quantity: 500,
               revenue: 180000,
               momQuantityGrowth: null,
+              momRevenueGrowth: null,
               yoyQuantityGrowth: 0.1,
+              yoyRevenueGrowth: 0.12,
             },
             {
               month: "2026-06",
               quantity: 700,
               revenue: 276000,
               momQuantityGrowth: 0.4,
+              momRevenueGrowth: 0.5333333333,
               yoyQuantityGrowth: 0.2,
+              yoyRevenueGrowth: 0.25,
             },
           ],
           topCustomers: [{ name: "Acme Tire", quantity: 700, revenue: 276000 }],
@@ -128,7 +134,11 @@ describe("AnalyticsDashboard", () => {
 
     expect((await screen.findAllByText("1,200")).length).toBeGreaterThan(0);
     expect(screen.getByText("$456,000")).toBeVisible();
-    expect(screen.getByText("40%")).toBeVisible();
+    expect(screen.getByText("$380")).toBeVisible();
+    expect(screen.getByText("Qty 40%")).toBeVisible();
+    expect(screen.getByText(/Rev 53\.3%/i)).toBeVisible();
+    expect(screen.getByText("Qty 20%")).toBeVisible();
+    expect(screen.getByText(/Rev 25%/i)).toBeVisible();
     expect(screen.getByText("14")).toBeVisible();
     expect(screen.getByRole("button", { name: /refresh/i })).toBeEnabled();
     expect(screen.getAllByText("Acme Tire").length).toBeGreaterThan(0);
@@ -219,5 +229,36 @@ describe("AnalyticsDashboard", () => {
       expect(screen.getAllByText("Beta Tire").length).toBeGreaterThan(0);
       expect(screen.queryAllByText("Acme Tire")).toHaveLength(0);
     });
+  });
+
+  test("applies month range filters to analytics requests", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => createAnalyticsResponse(1200),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<AnalyticsDashboard />);
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        `/api/analytics/sales?year=${currentYear}`,
+        expect.objectContaining({ cache: "no-store" }),
+      ),
+    );
+
+    fireEvent.change(screen.getByLabelText("Start Month"), {
+      target: { value: "2" },
+    });
+    fireEvent.change(screen.getByLabelText("End Month"), {
+      target: { value: "5" },
+    });
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        `/api/analytics/sales?year=${currentYear}&startMonth=2&endMonth=5`,
+        expect.objectContaining({ cache: "no-store" }),
+      ),
+    );
   });
 });

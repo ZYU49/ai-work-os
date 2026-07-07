@@ -24,7 +24,9 @@ type SalesAnalytics = {
     quantity: number;
     revenue: number;
     momQuantityGrowth: number | null;
+    momRevenueGrowth: number | null;
     yoyQuantityGrowth: number | null;
+    yoyRevenueGrowth: number | null;
   }>;
   topCustomers: Array<{ name: string; quantity: number; revenue: number }>;
   topCategories: Array<{ name: string; quantity: number; revenue: number }>;
@@ -58,6 +60,8 @@ const currentYear = String(new Date().getFullYear());
 
 const defaultFilters: SalesDashboardFilters = {
   year: currentYear,
+  startMonth: "",
+  endMonth: "",
   salesperson: "",
   customerName: "",
   category: "",
@@ -213,9 +217,22 @@ export function AnalyticsDashboard() {
             <KpiCard label="YTD Quantity" value={number(analytics.kpis.ytdQuantity)} />
             <KpiCard label="YTD Sales" value={money(analytics.kpis.ytdRevenue)} />
             <KpiCard
-              label="MoM Qty"
-              value={percent(latestMonth?.momQuantityGrowth ?? null)}
-              detail="Latest month"
+              label="Avg Unit Price"
+              value={
+                analytics.kpis.averageUnitPrice === null
+                  ? "N/A"
+                  : money(analytics.kpis.averageUnitPrice)
+              }
+            />
+            <KpiCard
+              label="Latest MoM"
+              value={`Qty ${percent(latestMonth?.momQuantityGrowth ?? null)}`}
+              detail={`Rev ${percent(latestMonth?.momRevenueGrowth ?? null)}${latestMonth ? ` · ${latestMonth.month}` : ""}`}
+            />
+            <KpiCard
+              label="Latest YoY"
+              value={`Qty ${percent(latestMonth?.yoyQuantityGrowth ?? null)}`}
+              detail={`Rev ${percent(latestMonth?.yoyRevenueGrowth ?? null)}${latestMonth ? ` · ${latestMonth.month}` : ""}`}
             />
             <KpiCard
               label="Active Customers"
