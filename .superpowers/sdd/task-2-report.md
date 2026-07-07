@@ -35,8 +35,6 @@ Self-review notes:
 Concerns:
 - None.
 
----
-
 Status: DONE
 
 Commit made:
@@ -50,6 +48,25 @@ Test command and result:
 Summary of fix:
 - Added a regression test for a header-only `RAW DATA` sheet with all required columns.
 - Updated preview parsing to validate headers from the actual worksheet header row instead of parsed data rows.
+
+Concerns:
+- None.
+
+---
+
+Status: DONE
+
+Commit made:
+- `test: cover midstate import commit behavior`
+
+Test command and result:
+- `npm run test -- services/midstate/parser.test.ts services/midstate/imports.test.ts`
+  - Result: PASS.
+  - Evidence: 2 test files passed, 14 tests passed.
+
+Summary of fix:
+- Added focused Midstate import commit tests covering persisted record shape, Cost Ext persistence, replacement deletion, current-import idempotent deletion before insert, 1,000 row batching, invalid-row summaries, and create-failure storage cleanup.
+- No implementation change was needed; the new tests passed against the existing import service behavior.
 
 Concerns:
 - None.
