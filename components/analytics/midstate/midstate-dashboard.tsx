@@ -15,6 +15,7 @@ import {
 } from "@/components/analytics/midstate/midstate-filters";
 import { OrderClassChart } from "@/components/analytics/midstate/order-class-chart";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import type { MidstateAnalyticsOverview } from "@/services/midstate/metrics";
 
 function money(value: number) {
@@ -58,6 +59,31 @@ function toRankingRows(
     quantity: row.quantity,
     revenue: row.costExt,
   }));
+}
+
+function MidstateTextKpiCard({
+  label,
+  value,
+  valueClassName,
+}: {
+  label: string;
+  value: string;
+  valueClassName: string;
+}) {
+  return (
+    <Card>
+      <CardContent className="min-w-0 p-4">
+        <p className="text-xs font-medium uppercase tracking-normal text-zinc-500">
+          {label}
+        </p>
+        <p
+          className={`mt-2 text-xl font-semibold leading-7 text-zinc-950 ${valueClassName}`}
+        >
+          {value}
+        </p>
+      </CardContent>
+    </Card>
+  );
 }
 
 export function MidstateDashboard() {
@@ -230,11 +256,16 @@ export function MidstateDashboard() {
               label="Active Members"
               value={number(analytics.kpis.activeMembers)}
             />
-            <KpiCard
+            <MidstateTextKpiCard
               label="Top Member"
               value={analytics.kpis.topMember ?? "N/A"}
+              valueClassName="break-words"
             />
-            <KpiCard label="Top SKU" value={analytics.kpis.topSku ?? "N/A"} />
+            <MidstateTextKpiCard
+              label="Top SKU"
+              value={analytics.kpis.topSku ?? "N/A"}
+              valueClassName="break-all"
+            />
           </div>
 
           <ChartCard title="Monthly Quantity and Cost Ext">
@@ -243,6 +274,10 @@ export function MidstateDashboard() {
                 ...point,
                 revenue: point.costExt,
               }))}
+              labels={{
+                valueLabel: "Cost Ext",
+                emptyState: "No Midstate monthly data yet.",
+              }}
             />
           </ChartCard>
 

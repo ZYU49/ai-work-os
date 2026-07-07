@@ -1,13 +1,24 @@
 // @vitest-environment jsdom
 
 import "@testing-library/jest-dom/vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { MidstateImporter } from "@/components/analytics/midstate/midstate-importer";
 
 describe("MidstateImporter", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
   });
 
   test("uploads and imports a Midstate workbook", async () => {
@@ -72,5 +83,79 @@ describe("MidstateImporter", () => {
     expect(
       await screen.findByText(/Imported 7,572 of 7,572 rows/),
     ).toBeInTheDocument();
+  });
+
+  test("retries duplicate periods with replacement enabled", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          import: {
+            importId: "import-duplicate",
+            fileName: "1001718 May 2026.xlsx",
+            sheetName: "RAW DATA",
+            totalRows: 7572,
+            totalQuantity: 14757,
+            warehouseQuantity: 14615,
+            directQuantity: 142,
+            memberCount: 19,
+            skuCount: 121,
+            dateRange: { start: "2026-05-01", end: "2026-05-30" },
+            periodYear: 2026,
+            periodMonth: 5,
+            vendorNumber: "1001718",
+            headers: ["VIN"],
+            previewRows: [],
+          },
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 409,
+        json: async () => ({ error: "This Midstate period already exists." }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          summary: {
+            totalRows: 7572,
+            importedRows: 7572,
+            rejectedRows: 0,
+            replacedImports: 1,
+          },
+        }),
+      });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<MidstateImporter />);
+
+    fireEvent.change(screen.getByLabelText(/midstate monthly file/i), {
+      target: { files: [new File(["data"], "1001718 May 2026.xlsx")] },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: /upload midstate file/i }),
+    );
+
+    expect(await screen.findByText(/14,757/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /import rows/i }));
+
+    const replaceExisting = await screen.findByLabelText(/replace existing period/i);
+    fireEvent.click(replaceExisting);
+    fireEvent.click(screen.getByRole("button", { name: /import rows/i }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenLastCalledWith(
+        "/api/analytics/midstate/imports/import-duplicate/commit",
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({ replaceExisting: true }),
+        }),
+      );
+    });
+    expect(
+      await screen.findByText(/Imported 7,572 of 7,572 rows/),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Replaced 1/)).toBeInTheDocument();
   });
 });

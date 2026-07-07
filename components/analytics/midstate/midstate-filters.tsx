@@ -94,7 +94,7 @@ export function MidstateFilters({
           value={filters.startMonth}
           onChange={(value) => update("startMonth", value)}
         >
-          <option value="">Jan</option>
+          <option value="">No start limit</option>
           {monthOptions.map(([value, label]) => (
             <option key={value} value={value}>
               {label}
@@ -106,7 +106,7 @@ export function MidstateFilters({
           value={filters.endMonth}
           onChange={(value) => update("endMonth", value)}
         >
-          <option value="">Dec</option>
+          <option value="">No end limit</option>
           {monthOptions.map(([value, label]) => (
             <option key={value} value={value}>
               {label}
