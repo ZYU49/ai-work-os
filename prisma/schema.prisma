@@ -67,6 +67,12 @@ enum SalesImportStatus {
   failed
 }
 
+enum MidstateImportStatus {
+  uploaded
+  imported
+  failed
+}
+
 enum SalesImportSourceType {
   excel
   csv
@@ -231,6 +237,57 @@ model SalesRecord {
   @@index([salesperson])
   @@index([memberName])
   @@index([shipToState])
+}
+
+model MidstateImport {
+  id           String                 @id @default(cuid())
+  fileName     String
+  storagePath  String
+  sheetName    String?
+  status       MidstateImportStatus   @default(uploaded)
+  totalRows    Int                    @default(0)
+  importedRows Int                    @default(0)
+  rejectedRows Int                    @default(0)
+  errorMessage String?
+  periodYear   Int?
+  periodMonth  Int?
+  vendorNumber String?
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+  records      MidstateSellThroughRecord[]
+
+  @@index([createdAt])
+  @@index([status])
+  @@index([periodYear, periodMonth])
+  @@index([vendorNumber])
+}
+
+model MidstateSellThroughRecord {
+  id           String          @id @default(cuid())
+  importId     String
+  postDate     DateTime
+  vendorName   String?
+  vendorNumber String?
+  memberNumber String
+  memberName   String
+  msItemNumber String?
+  sku          String
+  description  String?
+  orderClass   String
+  quantity     Decimal         @db.Decimal(18, 4)
+  cost         Decimal?        @db.Decimal(18, 4)
+  costExt      Decimal?        @db.Decimal(18, 4)
+  category     String?
+  createdAt    DateTime        @default(now())
+  import       MidstateImport  @relation(fields: [importId], references: [id], onDelete: Cascade)
+
+  @@index([importId])
+  @@index([postDate])
+  @@index([memberNumber])
+  @@index([memberName])
+  @@index([sku])
+  @@index([orderClass])
+  @@index([category])
 }
 
 model Note {
