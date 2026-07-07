@@ -1,5 +1,7 @@
 import { agentTools, type AgentTools } from "./tools";
 
+import { getMidstateAnalytics } from "@/services/midstate/metrics";
+
 export type AgentScope = "all" | "project" | "today";
 
 export type BuildAgentContextInput = {
@@ -121,6 +123,25 @@ async function buildSalesAnalyticsContext(tools: Partial<AgentTools>) {
   }
 }
 
+async function buildMidstateAnalyticsContext() {
+  try {
+    const midstate = await getMidstateAnalytics({
+      year: new Date().getFullYear(),
+    });
+
+    return [
+      "Midstate Analytics",
+      `YTD Sell-through Quantity: ${midstate.kpis.ytdQuantity.toLocaleString()}`,
+      `Current Month Quantity: ${midstate.kpis.currentMonthQuantity.toLocaleString()}`,
+      `Active Members: ${midstate.kpis.activeMembers.toLocaleString()}`,
+      `Top Member: ${midstate.kpis.topMember ?? "N/A"}`,
+      `Top SKU: ${midstate.kpis.topSku ?? "N/A"}`,
+    ];
+  } catch {
+    return ["Midstate Analytics", "Unavailable."];
+  }
+}
+
 async function buildProjectContext(
   input: BuildAgentContextInput,
   tools: Partial<AgentTools>,
@@ -192,13 +213,22 @@ async function buildTodayContext(tools: Partial<AgentTools>) {
 }
 
 async function buildAllContext(input: BuildAgentContextInput, tools: Partial<AgentTools>) {
-  const [overview, dueTasks, followUps, projectHits, emailHits, salesAnalytics] = await Promise.all([
+  const [
+    overview,
+    dueTasks,
+    followUps,
+    projectHits,
+    emailHits,
+    salesAnalytics,
+    midstateAnalytics,
+  ] = await Promise.all([
     tools.getTodayOverview?.(),
     tools.getDueTasks?.(7),
     tools.getOpenFollowUps?.(),
     tools.searchProjects?.(input.message),
     tools.searchEmails?.(input.message),
     buildSalesAnalyticsContext(tools),
+    buildMidstateAnalyticsContext(),
   ]);
 
   return [
@@ -220,6 +250,7 @@ async function buildAllContext(input: BuildAgentContextInput, tools: Partial<Age
     "Email search hits:",
     ...asItems(emailHits).map(emailLine),
     ...salesAnalytics,
+    ...midstateAnalytics,
   ];
 }
 

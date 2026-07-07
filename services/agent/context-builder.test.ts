@@ -1,6 +1,25 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { getMidstateAnalytics } from "@/services/midstate/metrics";
+
 import { buildAgentContext } from "./context-builder";
+
+vi.mock("@/services/midstate/metrics", () => ({
+  getMidstateAnalytics: vi.fn(async () => ({
+    kpis: {
+      ytdQuantity: 14757,
+      currentMonthQuantity: 14757,
+      ytdCostExt: 371155,
+      latestMoMQuantityGrowth: null,
+      latestYoYQuantityGrowth: null,
+      activeMembers: 19,
+      topMember: "Bomgaars Supply, Inc.",
+      topSku: "WD1030",
+    },
+    topMembers: [{ name: "Bomgaars Supply, Inc.", memberNumber: "82801", quantity: 5114, costExt: 0 }],
+    topSkus: [{ name: "WD1030", description: "Wheel", quantity: 2256, costExt: 0 }],
+  })),
+}));
 
 describe("buildAgentContext", () => {
   it("builds project scoped context with ids and compact sections", async () => {
@@ -112,8 +131,63 @@ describe("buildAgentContext", () => {
     expect(context.text).toContain("Sales Analytics");
     expect(context.text).toContain("YTD Quantity: 711,090");
     expect(context.text).toContain("Top Customer: TRACTOR SUPPLY COMPANY");
+    expect(context.text).toContain("Midstate Analytics");
+    expect(context.text).toContain("YTD Sell-through Quantity: 14,757");
+    expect(context.text).toContain("Top Member: Bomgaars Supply, Inc.");
+    expect(context.text).toContain("Top SKU: WD1030");
     expect(tools.getSalesAnalytics).toHaveBeenCalledWith({
       year: new Date().getFullYear(),
     });
+  });
+
+  it("keeps all-scope context available when midstate analytics is unavailable", async () => {
+    vi.mocked(getMidstateAnalytics).mockRejectedValueOnce(new Error("database offline"));
+
+    const tools = {
+      getTodayOverview: vi.fn().mockResolvedValue({
+        todayTasks: [],
+        todayEmails: [],
+        todayFiles: [],
+        todayActivities: [],
+        recentProjects: [],
+        openFollowUps: [],
+      }),
+      getDueTasks: vi.fn().mockResolvedValue([]),
+      getOpenFollowUps: vi.fn().mockResolvedValue([]),
+      searchProjects: vi.fn().mockResolvedValue([]),
+      searchEmails: vi.fn().mockResolvedValue([]),
+      getSalesAnalytics: vi.fn().mockResolvedValue({
+        kpis: {
+          ytdQuantity: 711090,
+          ytdRevenue: 21365036,
+          averageUnitPrice: 30.04,
+          activeCustomers: 27,
+        },
+        monthly: [],
+        topCustomers: [],
+        topCategories: [],
+        topSkus: [],
+        salespeople: [],
+        states: [],
+        filterOptions: {
+          years: [],
+          salespeople: [],
+          customers: [],
+          categories: [],
+          skus: [],
+          states: [],
+          members: [],
+        },
+      }),
+    };
+
+    const context = await buildAgentContext(
+      { message: "sales snapshot", scope: "all" },
+      tools,
+    );
+
+    expect(context.text).toContain("Sales Analytics");
+    expect(context.text).toContain("Midstate Analytics");
+    expect(context.text).toContain("Unavailable.");
   });
 });
