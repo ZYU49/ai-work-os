@@ -60,7 +60,7 @@ function isStorageError(error: unknown) {
   );
 }
 
-function isUploadValidationError(error: unknown) {
+function isUploadValidationError(error: unknown): error is Error {
   return (
     error instanceof Error &&
     [

@@ -47,7 +47,7 @@ function SelectFilter({
 }: {
   label: string;
   value: string;
-  options: Array<string | { value: string; label: string }>;
+  options: ReadonlyArray<string | { value: string; label: string }>;
   onChange: (value: string) => void;
 }) {
   return (

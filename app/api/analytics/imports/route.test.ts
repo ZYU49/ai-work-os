@@ -16,13 +16,14 @@ describe("analytics imports route", () => {
     vi.clearAllMocks();
   });
 
-  it("returns a 400 upload error for unreadable workbook files", async () => {
+  it.each([
+    "File could not be read as Excel or CSV.",
+    "Workbook has no readable sheets.",
+  ])("returns a 400 upload error for %s", async (message) => {
     const { createSalesImportFromFile } = await import("@/services/analytics/imports");
     const { POST } = await import("@/app/api/analytics/imports/route");
 
-    vi.mocked(createSalesImportFromFile).mockRejectedValueOnce(
-      new Error("File could not be read as Excel or CSV."),
-    );
+    vi.mocked(createSalesImportFromFile).mockRejectedValueOnce(new Error(message));
 
     const formData = new FormData();
     formData.set(
@@ -42,7 +43,7 @@ describe("analytics imports route", () => {
 
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toMatchObject({
-      error: "File could not be read as Excel or CSV.",
+      error: message,
     });
   });
 });
