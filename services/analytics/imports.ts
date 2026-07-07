@@ -37,6 +37,8 @@ export type SalesImportListItem = Awaited<
   ReturnType<typeof prisma.salesImport.findMany>
 >[number];
 
+const SALES_IMPORT_BATCH_SIZE = 1_000;
+
 export const salesMappingSchema = z
   .object(
     Object.fromEntries(
@@ -151,22 +153,22 @@ export async function commitSalesImport(
     });
   }
 
-  await prisma.$transaction(async (tx) => {
-    await tx.salesRecord.deleteMany({ where: { importId } });
-    if (records.length > 0) {
-      await tx.salesRecord.createMany({ data: records });
-    }
-    await tx.salesImport.update({
-      where: { id: importId },
-      data: {
-        status: SalesImportStatus.imported,
-        mapping,
-        totalRows: rows.length,
-        importedRows: records.length,
-        rejectedRows,
-        errorMessage: null,
-      },
+  await prisma.salesRecord.deleteMany({ where: { importId } });
+  for (let index = 0; index < records.length; index += SALES_IMPORT_BATCH_SIZE) {
+    await prisma.salesRecord.createMany({
+      data: records.slice(index, index + SALES_IMPORT_BATCH_SIZE),
     });
+  }
+  await prisma.salesImport.update({
+    where: { id: importId },
+    data: {
+      status: SalesImportStatus.imported,
+      mapping,
+      totalRows: rows.length,
+      importedRows: records.length,
+      rejectedRows,
+      errorMessage: null,
+    },
   });
 
   return {
