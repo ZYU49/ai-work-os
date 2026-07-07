@@ -404,7 +404,6 @@ export function summarizeMidstateRowsForTest(
     }))
     .sort((a, b) => b.quantity - a.quantity || a.sku.localeCompare(b.sku));
   const latestMonth = monthly.at(-1);
-  const currentMonthKey = `${year}-${String(endMonth).padStart(2, "0")}`;
   const memberOptions = [
     ...new Map(
       filterOptionRows.map((row) => [
@@ -417,7 +416,7 @@ export function summarizeMidstateRowsForTest(
   return {
     kpis: {
       ytdQuantity: currentRows.reduce((sum, row) => sum + row.quantity, 0),
-      currentMonthQuantity: monthlyMap.get(currentMonthKey)?.quantity ?? 0,
+      currentMonthQuantity: latestMonth?.quantity ?? 0,
       ytdCostExt: currentRows.reduce((sum, row) => sum + costExt(row), 0),
       latestMoMQuantityGrowth: latestMonth?.momQuantityGrowth ?? null,
       latestYoYQuantityGrowth: latestMonth?.yoyQuantityGrowth ?? null,

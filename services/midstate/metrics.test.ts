@@ -30,6 +30,14 @@ describe("midstate metrics", () => {
     });
   });
 
+  test("uses the latest available month as current month when endMonth is omitted", () => {
+    const analytics = summarizeMidstateRowsForTest(rows, {
+      year: 2026,
+    });
+
+    expect(analytics.kpis.currentMonthQuantity).toBe(210);
+  });
+
   test("computes YoY and MoM for the latest month", () => {
     const analytics = summarizeMidstateRowsForTest(rows, {
       year: 2026,
