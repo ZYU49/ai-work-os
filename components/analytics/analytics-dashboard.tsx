@@ -5,6 +5,7 @@ import { ChartCard } from "@/components/analytics/chart-card";
 import { KpiCard } from "@/components/analytics/kpi-card";
 import { MonthlyTrendChart } from "@/components/analytics/monthly-trend-chart";
 import { RankingBars } from "@/components/analytics/ranking-bars";
+import { YoYComparisonChart } from "@/components/analytics/yoy-comparison-chart";
 import {
   SalesFilters,
   type SalesDashboardFilters,
@@ -27,6 +28,18 @@ type SalesAnalytics = {
     momRevenueGrowth: number | null;
     yoyQuantityGrowth: number | null;
     yoyRevenueGrowth: number | null;
+  }>;
+  yoyComparison: Array<{
+    month: string;
+    monthLabel: string;
+    currentYear: number;
+    priorYear: number;
+    currentQuantity: number;
+    priorQuantity: number | null;
+    quantityGrowth: number | null;
+    currentRevenue: number;
+    priorRevenue: number | null;
+    revenueGrowth: number | null;
   }>;
   topCustomers: Array<{ name: string; quantity: number; revenue: number }>;
   topCategories: Array<{ name: string; quantity: number; revenue: number }>;
@@ -242,6 +255,10 @@ export function AnalyticsDashboard() {
 
           <ChartCard title="Monthly Quantity and Sales">
             <MonthlyTrendChart data={analytics.monthly} />
+          </ChartCard>
+
+          <ChartCard title="YoY Quantity Comparison">
+            <YoYComparisonChart data={analytics.yoyComparison} />
           </ChartCard>
 
           <div className="grid min-w-0 gap-6 lg:grid-cols-2">

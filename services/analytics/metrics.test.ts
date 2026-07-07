@@ -64,6 +64,26 @@ describe("sales metrics", () => {
         momQuantityGrowth: 0.5,
       }),
     ]);
+    expect(summary.yoyComparison).toEqual([
+      expect.objectContaining({
+        month: "01",
+        monthLabel: "Jan",
+        currentYear: 2026,
+        priorYear: 2025,
+        currentQuantity: 100,
+        priorQuantity: 50,
+        quantityGrowth: 1,
+      }),
+      expect.objectContaining({
+        month: "02",
+        monthLabel: "Feb",
+        currentYear: 2026,
+        priorYear: 2025,
+        currentQuantity: 150,
+        priorQuantity: null,
+        quantityGrowth: null,
+      }),
+    ]);
     expect(summary.topCustomers[0]).toMatchObject({ name: "B", quantity: 150 });
     expect(summary.filterOptions.salespeople).toEqual([
       "Allen Meng",

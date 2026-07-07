@@ -47,6 +47,20 @@ function createAnalyticsResponse(quantity: number, customerName = "Acme Tire") {
           yoyRevenueGrowth: 0.15,
         },
       ],
+      yoyComparison: [
+        {
+          month: "05",
+          monthLabel: "May",
+          currentYear: 2026,
+          priorYear: 2025,
+          currentQuantity: quantity,
+          priorQuantity: Math.round(quantity / 2),
+          quantityGrowth: 1,
+          currentRevenue: quantity * 100,
+          priorRevenue: quantity * 50,
+          revenueGrowth: 1,
+        },
+      ],
       topCustomers: [
         { name: customerName, quantity, revenue: quantity * 100 },
       ],
@@ -105,6 +119,32 @@ describe("AnalyticsDashboard", () => {
               yoyRevenueGrowth: 0.25,
             },
           ],
+          yoyComparison: [
+            {
+              month: "05",
+              monthLabel: "May",
+              currentYear: 2026,
+              priorYear: 2025,
+              currentQuantity: 500,
+              priorQuantity: 450,
+              quantityGrowth: 0.1111111111,
+              currentRevenue: 180000,
+              priorRevenue: 160000,
+              revenueGrowth: 0.125,
+            },
+            {
+              month: "06",
+              monthLabel: "Jun",
+              currentYear: 2026,
+              priorYear: 2025,
+              currentQuantity: 700,
+              priorQuantity: 583,
+              quantityGrowth: 0.2006861063,
+              currentRevenue: 276000,
+              priorRevenue: 220800,
+              revenueGrowth: 0.25,
+            },
+          ],
           topCustomers: [{ name: "Acme Tire", quantity: 700, revenue: 276000 }],
           topCategories: [{ name: "PCR", quantity: 650, revenue: 250000 }],
           topSkus: [{ name: "SKU-1", quantity: 600, revenue: 240000 }],
@@ -140,6 +180,9 @@ describe("AnalyticsDashboard", () => {
     expect(screen.getByText("Qty 20%")).toBeVisible();
     expect(screen.getByText(/Rev 25%/i)).toBeVisible();
     expect(screen.getByText("14")).toBeVisible();
+    expect(screen.getByText("YoY Quantity Comparison")).toBeVisible();
+    expect(screen.getByText("2026 Qty")).toBeVisible();
+    expect(screen.getByText("2025 Qty")).toBeVisible();
     expect(screen.getByRole("button", { name: /refresh/i })).toBeEnabled();
     expect(screen.getAllByText("Acme Tire").length).toBeGreaterThan(0);
     expect(screen.getByText("Salesperson Split")).toBeVisible();

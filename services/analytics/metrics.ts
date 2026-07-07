@@ -58,6 +58,19 @@ type SalesAnalyticsMonthly = {
   yoyRevenueGrowth: number | null;
 };
 
+type SalesAnalyticsYoYComparison = {
+  month: string;
+  monthLabel: string;
+  currentYear: number;
+  priorYear: number;
+  currentQuantity: number;
+  priorQuantity: number | null;
+  quantityGrowth: number | null;
+  currentRevenue: number;
+  priorRevenue: number | null;
+  revenueGrowth: number | null;
+};
+
 export type SalesAnalyticsOverview = {
   kpis: {
     ytdQuantity: number;
@@ -66,6 +79,7 @@ export type SalesAnalyticsOverview = {
     activeCustomers: number;
   };
   monthly: SalesAnalyticsMonthly[];
+  yoyComparison: SalesAnalyticsYoYComparison[];
   topCustomers: SalesAnalyticsRanking[];
   topCategories: SalesAnalyticsRanking[];
   topSkus: SalesAnalyticsRanking[];
@@ -116,6 +130,12 @@ function previousMonthKey(month: string) {
   const date = new Date(Date.UTC(year, monthIndex, 1));
   date.setUTCMonth(date.getUTCMonth() - 1);
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+function monthLabel(month: number) {
+  return new Intl.DateTimeFormat(undefined, { month: "short" }).format(
+    new Date(2026, month - 1, 1),
+  );
 }
 
 function addToRanking(
@@ -220,6 +240,26 @@ export function summarizeSalesRowsForTest(
         yoyRevenueGrowth: calculateGrowth(value.revenue, prior?.revenue),
       };
     });
+  const yoyComparison = [...monthlyMap.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([month, value]) => {
+      const [, monthText] = month.split("-");
+      const numericMonth = Number(monthText);
+      const prior = priorMonthlyMap.get(month);
+
+      return {
+        month: monthText,
+        monthLabel: monthLabel(numericMonth),
+        currentYear: year,
+        priorYear: year - 1,
+        currentQuantity: value.quantity,
+        priorQuantity: prior?.quantity ?? null,
+        quantityGrowth: calculateGrowth(value.quantity, prior?.quantity),
+        currentRevenue: value.revenue,
+        priorRevenue: prior?.revenue ?? null,
+        revenueGrowth: calculateGrowth(value.revenue, prior?.revenue),
+      };
+    });
 
   const ytdQuantity = currentRows.reduce((sum, row) => sum + row.quantity, 0);
   const ytdRevenue = currentRows.reduce((sum, row) => sum + row.revenue, 0);
@@ -232,6 +272,7 @@ export function summarizeSalesRowsForTest(
       activeCustomers: new Set(currentRows.map((row) => row.customerName)).size,
     },
     monthly,
+    yoyComparison,
     topCustomers: ranking(customers),
     topCategories: ranking(categories),
     topSkus: ranking(skus),
