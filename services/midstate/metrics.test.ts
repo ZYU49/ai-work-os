@@ -38,6 +38,56 @@ describe("midstate metrics", () => {
     expect(analytics.kpis.currentMonthQuantity).toBe(210);
   });
 
+  test("returns no SKU member distribution when no SKU filter is selected", () => {
+    const analytics = summarizeMidstateRowsForTest(rows, {
+      year: 2026,
+      startMonth: 1,
+      endMonth: 5,
+    });
+
+    expect(analytics.skuByMember).toEqual([]);
+  });
+
+  test("returns member distribution for the selected SKU", () => {
+    const analytics = summarizeMidstateRowsForTest(
+      [
+        ...rows,
+        {
+          postDate: new Date(2026, 4, 3),
+          memberNumber: "758801",
+          memberName: "Running Supply",
+          sku: "WD1030",
+          description: "Wheel",
+          orderClass: "Warehouse",
+          category: null,
+          quantity: 75,
+          costExt: 750,
+        },
+      ],
+      {
+        year: 2026,
+        startMonth: 1,
+        endMonth: 5,
+        sku: "WD1030",
+      },
+    );
+
+    expect(analytics.skuByMember).toEqual([
+      {
+        name: "Bomgaars",
+        memberNumber: "82801",
+        quantity: 250,
+        costExt: 2500,
+      },
+      {
+        name: "Running Supply",
+        memberNumber: "758801",
+        quantity: 75,
+        costExt: 750,
+      },
+    ]);
+  });
+
   test("computes YoY and MoM for the latest month", () => {
     const analytics = summarizeMidstateRowsForTest(rows, {
       year: 2026,

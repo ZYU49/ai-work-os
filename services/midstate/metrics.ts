@@ -432,7 +432,7 @@ export function summarizeMidstateRowsForTest(
     memberHeatmap: [...heatmap.values()].sort(
       (a, b) => a.memberName.localeCompare(b.memberName),
     ),
-    skuByMember: topMembers,
+    skuByMember: parsedFilters.sku ? topMembers : [],
     memberRows,
     skuRows,
     filterOptions: {
