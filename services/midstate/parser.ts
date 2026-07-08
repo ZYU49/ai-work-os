@@ -41,6 +41,8 @@ type MidstatePeriod = {
   periodMonth: number | null;
 };
 
+const MIDSTATE_WORKSHEET_ROW_NUMBER = "__midstateWorksheetRowNumber";
+
 export const MIDSTATE_RAW_DATA_SHEET = "RAW DATA";
 export const midstateRequiredHeaders = [
   "Vendor Name",
@@ -97,11 +99,15 @@ function parseSheetRows(sheet: WorkSheet) {
     defval: null,
     raw: true,
   });
-  return rows.filter((row) =>
-    Object.values(row).some(
-      (value) => value !== null && String(value).trim() !== "",
-    ),
-  );
+  return rows
+    .map((row, index) =>
+      withMidstateWorksheetRowNumber(row, worksheetRowNumber(row, index)),
+    )
+    .filter((row) =>
+      Object.values(row).some(
+        (value) => value !== null && String(value).trim() !== "",
+      ),
+    );
 }
 
 function parseSheetHeaders(sheet: WorkSheet) {
@@ -199,6 +205,34 @@ function dateIsInPeriod(date: Date | null, period: MidstatePeriod) {
   );
 }
 
+function worksheetRowNumber(row: Record<string, unknown>, index: number) {
+  const sheetRowIndex = (row as { __rowNum__?: unknown }).__rowNum__;
+  return typeof sheetRowIndex === "number" ? sheetRowIndex + 1 : index + 2;
+}
+
+function withMidstateWorksheetRowNumber<T extends Record<string, unknown>>(
+  row: T,
+  rowNumber: number,
+) {
+  if (getMidstateWorksheetRowNumber(row) !== null) {
+    return row;
+  }
+
+  Object.defineProperty(row, MIDSTATE_WORKSHEET_ROW_NUMBER, {
+    value: rowNumber,
+    enumerable: false,
+    configurable: true,
+  });
+  return row;
+}
+
+export function getMidstateWorksheetRowNumber(row: Record<string, unknown>) {
+  const rowNumber = (row as { [MIDSTATE_WORKSHEET_ROW_NUMBER]?: unknown })[
+    MIDSTATE_WORKSHEET_ROW_NUMBER
+  ];
+  return typeof rowNumber === "number" ? rowNumber : null;
+}
+
 function targetPeriodForRows(
   rows: Record<string, unknown>[],
   fileName: string,
@@ -219,7 +253,11 @@ export function filterMidstateRowsForPeriod(
   rows: Record<string, unknown>[],
   period: MidstatePeriod,
 ) {
-  return rows.filter((row) => dateIsInPeriod(rowPostDate(row), period));
+  return rows
+    .map((row, index) =>
+      withMidstateWorksheetRowNumber(row, worksheetRowNumber(row, index)),
+    )
+    .filter((row) => dateIsInPeriod(rowPostDate(row), period));
 }
 
 export function rowsFromMidstateWorkbook(

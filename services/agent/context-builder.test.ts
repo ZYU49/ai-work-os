@@ -1,11 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { getMidstateAnalytics } from "@/services/midstate/metrics";
-
 import { buildAgentContext } from "./context-builder";
 
-vi.mock("@/services/midstate/metrics", () => ({
-  getMidstateAnalytics: vi.fn(async () => ({
+function midstateAnalytics() {
+  return {
     kpis: {
       ytdQuantity: 14757,
       currentMonthQuantity: 14757,
@@ -18,8 +16,8 @@ vi.mock("@/services/midstate/metrics", () => ({
     },
     topMembers: [{ name: "Bomgaars Supply, Inc.", memberNumber: "82801", quantity: 5114, costExt: 0 }],
     topSkus: [{ name: "WD1030", description: "Wheel", quantity: 2256, costExt: 0 }],
-  })),
-}));
+  };
+}
 
 describe("buildAgentContext", () => {
   it("builds project scoped context with ids and compact sections", async () => {
@@ -63,6 +61,7 @@ describe("buildAgentContext", () => {
       getOpenFollowUps: vi.fn().mockResolvedValue([{ id: "follow-1", title: "Reply" }]),
       searchProjects: vi.fn().mockResolvedValue([{ id: "project-2", name: "Search hit" }]),
       searchEmails: vi.fn().mockResolvedValue([{ id: "email-1", subject: "Search email" }]),
+      getMidstateAnalytics: vi.fn().mockResolvedValue(midstateAnalytics()),
     };
 
     const context = await buildAgentContext(
@@ -78,6 +77,7 @@ describe("buildAgentContext", () => {
       "searchProjects",
       "searchEmails",
       "getSalesAnalytics",
+      "getMidstateAnalytics",
     ]);
   });
 
@@ -121,6 +121,7 @@ describe("buildAgentContext", () => {
           members: [],
         },
       }),
+      getMidstateAnalytics: vi.fn().mockResolvedValue(midstateAnalytics()),
     };
 
     const context = await buildAgentContext(
@@ -138,11 +139,12 @@ describe("buildAgentContext", () => {
     expect(tools.getSalesAnalytics).toHaveBeenCalledWith({
       year: new Date().getFullYear(),
     });
+    expect(tools.getMidstateAnalytics).toHaveBeenCalledWith({
+      year: new Date().getFullYear(),
+    });
   });
 
   it("keeps all-scope context available when midstate analytics is unavailable", async () => {
-    vi.mocked(getMidstateAnalytics).mockRejectedValueOnce(new Error("database offline"));
-
     const tools = {
       getTodayOverview: vi.fn().mockResolvedValue({
         todayTasks: [],
@@ -179,6 +181,7 @@ describe("buildAgentContext", () => {
           members: [],
         },
       }),
+      getMidstateAnalytics: vi.fn().mockRejectedValue(new Error("database offline")),
     };
 
     const context = await buildAgentContext(

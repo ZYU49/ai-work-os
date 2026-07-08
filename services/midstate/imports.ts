@@ -7,6 +7,7 @@ import { deleteStoredFile, saveUploadedFile } from "@/lib/storage";
 import {
   extractMidstatePreview,
   filterMidstateRowsForPeriod,
+  getMidstateWorksheetRowNumber,
   normalizeMidstateRow,
   rowsFromMidstateWorkbook,
   type MidstateWorkbookPreview,
@@ -156,7 +157,12 @@ export async function commitMidstateImport(
     const normalized = normalizeMidstateRow(row);
     if (!normalized.ok) {
       rejectedRows += 1;
-      errors.push(rejectedRowMessage(index + 2, normalized.errors));
+      errors.push(
+        rejectedRowMessage(
+          getMidstateWorksheetRowNumber(row) ?? index + 2,
+          normalized.errors,
+        ),
+      );
       return;
     }
     records.push({

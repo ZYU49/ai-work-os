@@ -1,7 +1,5 @@
 import { agentTools, type AgentTools } from "./tools";
 
-import { getMidstateAnalytics } from "@/services/midstate/metrics";
-
 export type AgentScope = "all" | "project" | "today";
 
 export type BuildAgentContextInput = {
@@ -123,11 +121,15 @@ async function buildSalesAnalyticsContext(tools: Partial<AgentTools>) {
   }
 }
 
-async function buildMidstateAnalyticsContext() {
+async function buildMidstateAnalyticsContext(tools: Partial<AgentTools>) {
   try {
-    const midstate = await getMidstateAnalytics({
+    const midstate = await tools.getMidstateAnalytics?.({
       year: new Date().getFullYear(),
     });
+
+    if (!midstate) {
+      return ["Midstate Analytics", "Unavailable."];
+    }
 
     return [
       "Midstate Analytics",
@@ -228,7 +230,7 @@ async function buildAllContext(input: BuildAgentContextInput, tools: Partial<Age
     tools.searchProjects?.(input.message),
     tools.searchEmails?.(input.message),
     buildSalesAnalyticsContext(tools),
-    buildMidstateAnalyticsContext(),
+    buildMidstateAnalyticsContext(tools),
   ]);
 
   return [
@@ -270,6 +272,7 @@ export async function buildAgentContext(
             "searchProjects",
             "searchEmails",
             "getSalesAnalytics",
+            "getMidstateAnalytics",
           ];
 
   const lines =

@@ -329,6 +329,35 @@ describe("midstate imports", () => {
     });
   });
 
+  test("reports source worksheet row number for invalid target-period rows after skipped rows", async () => {
+    vi.mocked(rowsFromMidstateWorkbook).mockReturnValue([
+      validMidstateRow({
+        VIN: "APR2026",
+        "Member Number": "42026",
+        "Post Date": new Date("2026-04-30T00:00:00"),
+      }),
+      validMidstateRow(),
+      validMidstateRow({
+        VIN: "",
+        "Member Name": "",
+        "Qty Shipped": "not-a-number",
+      }),
+    ]);
+
+    const result = await commitMidstateImport("import-1");
+
+    expect(result.errors).toEqual([
+      "Row 4: Member Name is required. SKU is required. Qty Shipped is invalid.",
+    ]);
+    expect(prisma.midstateImport.update).toHaveBeenCalledWith({
+      where: { id: "import-1" },
+      data: expect.objectContaining({
+        errorMessage:
+          "Row 4: Member Name is required. SKU is required. Qty Shipped is invalid.",
+      }),
+    });
+  });
+
   test("deletes a saved upload if prisma create fails", async () => {
     vi.mocked(prisma.midstateImport.create).mockRejectedValueOnce(
       new Error("db unavailable"),

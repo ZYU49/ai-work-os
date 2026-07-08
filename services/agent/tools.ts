@@ -5,6 +5,11 @@ import {
   type SalesAnalyticsFilters,
   type SalesAnalyticsOverview,
 } from "../analytics/metrics";
+import {
+  getMidstateAnalytics as readMidstateAnalytics,
+  type MidstateAnalyticsFilters,
+  type MidstateAnalyticsOverview,
+} from "../midstate/metrics";
 import { getDailyLogContext } from "../daily-log";
 import { getDashboardOverview } from "../dashboard";
 
@@ -586,6 +591,12 @@ export async function getSalesAnalytics(
   return readSalesAnalytics(filters);
 }
 
+export async function getMidstateAnalytics(
+  filters: MidstateAnalyticsFilters = { year: new Date().getFullYear() },
+): Promise<MidstateAnalyticsOverview> {
+  return readMidstateAnalytics(filters);
+}
+
 export const agentTools = {
   getTodayOverview,
   getProjectSummary,
@@ -595,6 +606,7 @@ export const agentTools = {
   getOpenFollowUps,
   getDailyLogContextForAgent,
   getSalesAnalytics,
+  getMidstateAnalytics,
   resolveProjectReference,
 };
 
