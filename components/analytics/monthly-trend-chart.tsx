@@ -17,6 +17,12 @@ type MonthlyPoint = {
   revenue: number;
 };
 
+type MonthlyTrendChartLabels = {
+  quantityLabel?: string;
+  valueLabel?: string;
+  emptyState?: string;
+};
+
 function money(value: number) {
   return new Intl.NumberFormat(undefined, {
     style: "currency",
@@ -25,11 +31,20 @@ function money(value: number) {
   }).format(value);
 }
 
-export function MonthlyTrendChart({ data }: { data: MonthlyPoint[] }) {
+export function MonthlyTrendChart({
+  data,
+  labels,
+}: {
+  data: MonthlyPoint[];
+  labels?: MonthlyTrendChartLabels;
+}) {
+  const quantityLabel = labels?.quantityLabel ?? "Quantity";
+  const valueLabel = labels?.valueLabel ?? "Revenue";
+
   if (data.length === 0) {
     return (
       <p className="py-12 text-center text-sm text-zinc-500">
-        No monthly sales data yet.
+        {labels?.emptyState ?? "No monthly sales data yet."}
       </p>
     );
   }
@@ -59,12 +74,12 @@ export function MonthlyTrendChart({ data }: { data: MonthlyPoint[] }) {
           />
           <Tooltip
             formatter={(value, name) =>
-              name === "Revenue"
+              name === valueLabel
                 ? money(Number(value ?? 0))
                 : Number(value ?? 0).toLocaleString()
             }
           />
-          <Bar yAxisId="right" dataKey="revenue" fill="#71717a" name="Revenue" />
+          <Bar yAxisId="right" dataKey="revenue" fill="#71717a" name={valueLabel} />
           <Line
             yAxisId="left"
             type="monotone"
@@ -72,7 +87,7 @@ export function MonthlyTrendChart({ data }: { data: MonthlyPoint[] }) {
             stroke="#18181b"
             strokeWidth={2}
             dot={false}
-            name="Quantity"
+            name={quantityLabel}
           />
         </ComposedChart>
       </ResponsiveContainer>

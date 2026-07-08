@@ -121,6 +121,29 @@ async function buildSalesAnalyticsContext(tools: Partial<AgentTools>) {
   }
 }
 
+async function buildMidstateAnalyticsContext(tools: Partial<AgentTools>) {
+  try {
+    const midstate = await tools.getMidstateAnalytics?.({
+      year: new Date().getFullYear(),
+    });
+
+    if (!midstate) {
+      return ["Midstate Analytics", "Unavailable."];
+    }
+
+    return [
+      "Midstate Analytics",
+      `YTD Sell-through Quantity: ${midstate.kpis.ytdQuantity.toLocaleString()}`,
+      `Current Month Quantity: ${midstate.kpis.currentMonthQuantity.toLocaleString()}`,
+      `Active Members: ${midstate.kpis.activeMembers.toLocaleString()}`,
+      `Top Member: ${midstate.kpis.topMember ?? "N/A"}`,
+      `Top SKU: ${midstate.kpis.topSku ?? "N/A"}`,
+    ];
+  } catch {
+    return ["Midstate Analytics", "Unavailable."];
+  }
+}
+
 async function buildProjectContext(
   input: BuildAgentContextInput,
   tools: Partial<AgentTools>,
@@ -192,13 +215,22 @@ async function buildTodayContext(tools: Partial<AgentTools>) {
 }
 
 async function buildAllContext(input: BuildAgentContextInput, tools: Partial<AgentTools>) {
-  const [overview, dueTasks, followUps, projectHits, emailHits, salesAnalytics] = await Promise.all([
+  const [
+    overview,
+    dueTasks,
+    followUps,
+    projectHits,
+    emailHits,
+    salesAnalytics,
+    midstateAnalytics,
+  ] = await Promise.all([
     tools.getTodayOverview?.(),
     tools.getDueTasks?.(7),
     tools.getOpenFollowUps?.(),
     tools.searchProjects?.(input.message),
     tools.searchEmails?.(input.message),
     buildSalesAnalyticsContext(tools),
+    buildMidstateAnalyticsContext(tools),
   ]);
 
   return [
@@ -220,6 +252,7 @@ async function buildAllContext(input: BuildAgentContextInput, tools: Partial<Age
     "Email search hits:",
     ...asItems(emailHits).map(emailLine),
     ...salesAnalytics,
+    ...midstateAnalytics,
   ];
 }
 
@@ -239,6 +272,7 @@ export async function buildAgentContext(
             "searchProjects",
             "searchEmails",
             "getSalesAnalytics",
+            "getMidstateAnalytics",
           ];
 
   const lines =
