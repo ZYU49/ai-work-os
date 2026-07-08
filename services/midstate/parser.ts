@@ -136,7 +136,7 @@ function isoDate(date: Date | null) {
   return date ? date.toISOString().slice(0, 10) : null;
 }
 
-const monthNumberByName = new Map(
+const monthNumberByName = new Map<string, number>(
   [
     ["jan", 1],
     ["january", 1],
