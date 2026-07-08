@@ -242,4 +242,20 @@ describe("midstate metrics", () => {
       "Lawn & Garden",
     ]);
   });
+
+  test("uses the item master description and item group category when available", () => {
+    const analytics = summarizeMidstateRowsForTest(
+      [
+        { postDate: new Date(2026, 4, 1), memberNumber: "82801", memberName: "Bomgaars", sku: "WD1030", description: "15X6-6 SU05 LG", orderClass: "Warehouse", category: null, quantity: 12, costExt: 120 },
+      ],
+      { year: 2026 },
+    );
+
+    expect(analytics.itemRankings[0]).toMatchObject({
+      itemNumber: "WD1030",
+      description: "15X6.00-6 2PR SU05 HI-RUN",
+      category: "Lawn & Garden",
+      quantity: 12,
+    });
+  });
 });

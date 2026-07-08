@@ -1,5 +1,6 @@
 import type { MidstateSellThroughRecord } from "@prisma/client";
 import { z } from "zod";
+import { getMidstateItemMetadata } from "@/services/midstate/item-master";
 
 export const midstateAnalyticsFiltersSchema = z
   .object({
@@ -367,16 +368,19 @@ function rollingItemRankings(rows: MidstateMetricRow[], keys: string[]) {
       continue;
     }
 
+    const itemMetadata = getMidstateItemMetadata(row.sku);
     const current = itemTotals.get(row.sku) ?? {
       itemNumber: row.sku,
-      description: row.description,
-      category: inferredItemCategory(row),
+      description: itemMetadata?.description ?? row.description,
+      category: itemMetadata?.category ?? inferredItemCategory(row),
       quantity: 0,
     };
 
     current.quantity += row.quantity;
-    current.description = current.description ?? row.description;
-    current.category = current.category ?? inferredItemCategory(row);
+    current.description =
+      current.description ?? itemMetadata?.description ?? row.description;
+    current.category =
+      current.category ?? itemMetadata?.category ?? inferredItemCategory(row);
     itemTotals.set(row.sku, current);
   }
 
