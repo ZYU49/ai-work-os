@@ -181,6 +181,7 @@ describe("AnalyticsDashboard", () => {
     expect(screen.getByText(/Rev 25%/i)).toBeVisible();
     expect(screen.getByText("14")).toBeVisible();
     expect(screen.getByText("YoY Quantity Comparison")).toBeVisible();
+    expect(screen.getAllByText("Scope: 2026 YTD Jan-Jun").length).toBeGreaterThan(0);
     expect(screen.getByText("2026 Qty")).toBeVisible();
     expect(screen.getByText("2025 Qty")).toBeVisible();
     expect(screen.getByRole("button", { name: /refresh/i })).toBeEnabled();
@@ -303,5 +304,7 @@ describe("AnalyticsDashboard", () => {
         expect.objectContaining({ cache: "no-store" }),
       ),
     );
+
+    expect(await screen.findAllByText(`Scope: ${currentYear} Feb-May`)).not.toHaveLength(0);
   });
 });

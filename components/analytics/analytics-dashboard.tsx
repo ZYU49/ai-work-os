@@ -83,6 +83,41 @@ const defaultFilters: SalesDashboardFilters = {
   memberName: "",
 };
 
+const monthNames = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
+function scopeLabel(
+  filters: SalesDashboardFilters,
+  latestMonth?: string | null,
+) {
+  const startMonth = filters.startMonth ? Number(filters.startMonth) : 1;
+  const latestDataMonth = latestMonth
+    ? Number(latestMonth.split("-")[1])
+    : undefined;
+  const endMonth = filters.endMonth
+    ? Number(filters.endMonth)
+    : (latestDataMonth ?? 12);
+  const isYtd = !filters.startMonth && !filters.endMonth;
+  const rangeLabel =
+    startMonth === endMonth
+      ? monthNames[startMonth - 1]
+      : `${monthNames[startMonth - 1]}-${monthNames[endMonth - 1]}`;
+
+  return `Scope: ${filters.year}${isYtd ? " YTD" : ""} ${rangeLabel}`;
+}
+
 export function AnalyticsDashboard() {
   const [analytics, setAnalytics] = useState<SalesAnalytics | null>(null);
   const [filters, setFilters] = useState<SalesDashboardFilters>(defaultFilters);
@@ -92,6 +127,7 @@ export function AnalyticsDashboard() {
   const requestSequenceRef = useRef(0);
 
   const latestMonth = analytics?.monthly.at(-1);
+  const currentScopeLabel = scopeLabel(filters, latestMonth?.month);
 
   const loadAnalytics = useCallback(async (nextFilters: SalesDashboardFilters) => {
     abortControllerRef.current?.abort();
@@ -253,25 +289,25 @@ export function AnalyticsDashboard() {
             />
           </div>
 
-          <ChartCard title="Monthly Quantity and Sales">
+          <ChartCard title="Monthly Quantity and Sales" subtitle={currentScopeLabel}>
             <MonthlyTrendChart data={analytics.monthly} />
           </ChartCard>
 
-          <ChartCard title="YoY Quantity Comparison">
+          <ChartCard title="YoY Quantity Comparison" subtitle={currentScopeLabel}>
             <YoYComparisonChart data={analytics.yoyComparison} />
           </ChartCard>
 
           <div className="grid min-w-0 gap-6 lg:grid-cols-2">
-            <ChartCard title="Top Customers">
+            <ChartCard title="Top Customers" subtitle={currentScopeLabel}>
               <RankingBars data={analytics.topCustomers} />
             </ChartCard>
-            <ChartCard title="Top Categories">
+            <ChartCard title="Top Categories" subtitle={currentScopeLabel}>
               <RankingBars data={analytics.topCategories} />
             </ChartCard>
-            <ChartCard title="Top SKUs / Products">
+            <ChartCard title="Top SKUs / Products" subtitle={currentScopeLabel}>
               <RankingBars data={analytics.topSkus} />
             </ChartCard>
-            <ChartCard title="Salesperson Split">
+            <ChartCard title="Salesperson Split" subtitle={currentScopeLabel}>
               <RankingBars data={analytics.salespeople} />
             </ChartCard>
           </div>
