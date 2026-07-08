@@ -67,6 +67,13 @@ export type MidstateAnalyticsOverview = {
     topMember: string | null;
     topSku: string | null;
   }>;
+  itemRankings: Array<{
+    rank: number;
+    itemNumber: string;
+    description: string | null;
+    category: string | null;
+    quantity: number;
+  }>;
   monthly: Array<{
     month: string;
     quantity: number;
@@ -162,6 +169,13 @@ type SkuTotals = MetricTotals & {
   sku: string;
   description: string | null;
   memberTotals: Map<string, number>;
+};
+
+type ItemRankingTotals = {
+  itemNumber: string;
+  description: string | null;
+  category: string | null;
+  quantity: number;
 };
 
 export function calculateGrowth(
@@ -278,6 +292,30 @@ function topMapKey(map: Map<string, number>) {
   )[0]?.[0] ?? null;
 }
 
+function inferredItemCategory(row: Pick<MidstateMetricRow, "sku" | "category">) {
+  if (row.category?.trim()) {
+    return row.category;
+  }
+
+  const sku = row.sku.toUpperCase();
+  if (sku.startsWith("ASR")) {
+    return "ST Radial";
+  }
+  if (sku.startsWith("ASB")) {
+    return "ST Bias";
+  }
+  if (
+    sku.startsWith("AWD") ||
+    sku.startsWith("CT") ||
+    sku.startsWith("WB") ||
+    sku.startsWith("WD")
+  ) {
+    return "Lawn & Garden";
+  }
+
+  return null;
+}
+
 function memberOptionLabel(row: MidstateMetricRow) {
   return `${row.memberName} (${row.memberNumber})`;
 }
@@ -318,6 +356,39 @@ function overallRollingMonths(rows: MidstateMetricRow[], keys: string[]) {
       topSku: topMapKey(skuTotals),
     };
   });
+}
+
+function rollingItemRankings(rows: MidstateMetricRow[], keys: string[]) {
+  const keySet = new Set(keys);
+  const itemTotals = new Map<string, ItemRankingTotals>();
+
+  for (const row of rows) {
+    if (!keySet.has(monthKey(row.postDate))) {
+      continue;
+    }
+
+    const current = itemTotals.get(row.sku) ?? {
+      itemNumber: row.sku,
+      description: row.description,
+      category: inferredItemCategory(row),
+      quantity: 0,
+    };
+
+    current.quantity += row.quantity;
+    current.description = current.description ?? row.description;
+    current.category = current.category ?? inferredItemCategory(row);
+    itemTotals.set(row.sku, current);
+  }
+
+  return [...itemTotals.values()]
+    .sort(
+      (a, b) =>
+        b.quantity - a.quantity || a.itemNumber.localeCompare(b.itemNumber),
+    )
+    .map((row, index) => ({
+      rank: index + 1,
+      ...row,
+    }));
 }
 
 export function summarizeMidstateRowsForTest(
@@ -542,6 +613,7 @@ export function summarizeMidstateRowsForTest(
       : null,
     rollingMonths: quantityRollingMonths(rollingRows, rollingKeys),
     overallRollingMonths: overallRollingMonths(overallRows, rollingKeys),
+    itemRankings: rollingItemRankings(overallRows, rollingKeys),
     monthly,
     yoyComparison,
     orderClassMonthly,

@@ -85,6 +85,22 @@ function createAnalyticsResponse({
         topMember: point.quantity > 0 ? "Bomgaars Supply, Inc." : null,
         topSku: point.quantity > 0 ? "WD1030" : null,
       })),
+      itemRankings: [
+        {
+          rank: 1,
+          itemNumber: "RAD400",
+          description: "Radial tire",
+          category: "ST Radial",
+          quantity: 90,
+        },
+        {
+          rank: 2,
+          itemNumber: "LG200",
+          description: "Garden tire",
+          category: "Lawn & Garden",
+          quantity: 75,
+        },
+      ],
       monthly: rollingMonths.map((point) => ({
         ...point,
         costExt: point.quantity > 0 ? 371155 : 0,
@@ -151,7 +167,7 @@ function createAnalyticsResponse({
         years: [currentYear],
         members: [{ value: "82801", label: "Bomgaars Supply, Inc." }],
         skus: ["WD1030"],
-        categories: [],
+        categories: ["Lawn & Garden", "ST Radial"],
         orderClasses: ["Warehouse", "Direct"],
       },
     },
@@ -183,7 +199,7 @@ describe("MidstateDashboard", () => {
     expect(screen.getAllByText("14,757").length).toBeGreaterThan(0);
     expect(screen.getByText("Member Rolling 12 Months")).toBeInTheDocument();
     expect(screen.getByText("Midstate Overall Rolling 12 Months")).toBeInTheDocument();
-    expect(screen.getByText("Rolling 12-Month Table")).toBeInTheDocument();
+    expect(screen.getAllByText("Rolling 12-Month Table").length).toBeGreaterThan(0);
     expect(screen.queryByText("YTD Cost Ext")).not.toBeInTheDocument();
     await waitFor(() => {
       expect(fetch).toHaveBeenCalledWith(
@@ -252,6 +268,36 @@ describe("MidstateDashboard", () => {
 
     expect(await screen.findByText(longTopMember)).toHaveClass("break-words");
     expect(screen.getByText(longTopSku)).toHaveClass("break-words");
+  });
+
+  test("shows item ranking by category under the rolling table", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => createAnalyticsResponse(),
+      }),
+    );
+
+    render(<MidstateDashboard />);
+
+    fireEvent.click(await screen.findByRole("button", {
+      name: "Item Ranking by Category",
+    }));
+
+    expect(screen.getByLabelText("Category")).toBeInTheDocument();
+    expect(screen.getByText("RAD400")).toBeVisible();
+    expect(screen.getByText("Radial tire")).toBeVisible();
+    expect(screen.getByText("90")).toBeVisible();
+
+    fireEvent.change(screen.getByLabelText("Category"), {
+      target: { value: "Lawn & Garden" },
+    });
+
+    expect(screen.getByText("LG200")).toBeVisible();
+    expect(screen.getByText("Garden tire")).toBeVisible();
+    expect(screen.getByText("75")).toBeVisible();
+    expect(screen.queryByText("RAD400")).not.toBeInTheDocument();
   });
 
   test("renders only the member filter for the rolling dashboard", () => {

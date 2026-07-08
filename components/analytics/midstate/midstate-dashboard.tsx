@@ -18,6 +18,8 @@ const defaultFilters: MidstateDashboardFilters = {
   memberNumber: "",
 };
 
+type DetailTab = "rolling" | "ranking";
+
 function number(value: number) {
   return new Intl.NumberFormat().format(value);
 }
@@ -28,6 +30,10 @@ function latest<T>(rows: T[]) {
 
 function totalQuantity(rows: Array<{ quantity: number }>) {
   return rows.reduce((sum, row) => sum + row.quantity, 0);
+}
+
+function categoryLabel(value: string | null) {
+  return value?.trim() || "Uncategorized";
 }
 
 function chartTitle(analytics: MidstateAnalyticsOverview | null) {
@@ -126,39 +132,182 @@ function RollingTable({
   rows: MidstateAnalyticsOverview["overallRollingMonths"];
 }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Rolling 12-Month Table</CardTitle>
-      </CardHeader>
-      <CardContent className="overflow-x-auto">
-        <table className="w-full min-w-[720px] text-sm">
-          <thead>
-            <tr className="border-b border-zinc-200 text-left text-xs font-medium uppercase tracking-normal text-zinc-500">
-              <th className="py-2 pr-4">Month</th>
-              <th className="px-4 py-2 text-right">Total Quantity</th>
-              <th className="px-4 py-2 text-right">Active Members</th>
-              <th className="px-4 py-2">Top Member</th>
-              <th className="py-2 pl-4">Top SKU</th>
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[720px] text-sm">
+        <thead>
+          <tr className="border-b border-zinc-200 text-left text-xs font-medium uppercase tracking-normal text-zinc-500">
+            <th className="py-2 pr-4">Month</th>
+            <th className="px-4 py-2 text-right">Total Quantity</th>
+            <th className="px-4 py-2 text-right">Active Members</th>
+            <th className="px-4 py-2">Top Member</th>
+            <th className="py-2 pl-4">Top SKU</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.month} className="border-b border-zinc-100 last:border-0">
+              <td className="py-2 pr-4 font-medium text-zinc-950">{row.month}</td>
+              <td className="px-4 py-2 text-right tabular-nums">
+                {number(row.quantity)}
+              </td>
+              <td className="px-4 py-2 text-right tabular-nums">
+                {number(row.activeMembers)}
+              </td>
+              <td className="max-w-[260px] truncate px-4 py-2">
+                {row.topMember ?? "N/A"}
+              </td>
+              <td className="py-2 pl-4">{row.topSku ?? "N/A"}</td>
             </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.month} className="border-b border-zinc-100 last:border-0">
-                <td className="py-2 pr-4 font-medium text-zinc-950">{row.month}</td>
-                <td className="px-4 py-2 text-right tabular-nums">
-                  {number(row.quantity)}
-                </td>
-                <td className="px-4 py-2 text-right tabular-nums">
-                  {number(row.activeMembers)}
-                </td>
-                <td className="max-w-[260px] truncate px-4 py-2">
-                  {row.topMember ?? "N/A"}
-                </td>
-                <td className="py-2 pl-4">{row.topSku ?? "N/A"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function DetailTabButton({
+  active,
+  children,
+  onClick,
+}: {
+  active: boolean;
+  children: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`h-8 rounded px-3 text-sm font-medium transition-colors ${
+        active
+          ? "bg-zinc-950 text-white"
+          : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function ItemRankingTable({
+  rows,
+}: {
+  rows: MidstateAnalyticsOverview["itemRankings"];
+}) {
+  if (rows.length === 0) {
+    return (
+      <p className="py-8 text-center text-sm text-zinc-500">
+        No item rankings for this category.
+      </p>
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[760px] text-sm">
+        <thead>
+          <tr className="border-b border-zinc-200 text-left text-xs font-medium uppercase tracking-normal text-zinc-500">
+            <th className="py-2 pr-4 text-right">Ranking</th>
+            <th className="px-4 py-2">Item Number</th>
+            <th className="px-4 py-2">Description</th>
+            <th className="px-4 py-2">Category</th>
+            <th className="py-2 pl-4 text-right">Qty</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr
+              key={`${row.category ?? "uncategorized"}-${row.itemNumber}`}
+              className="border-b border-zinc-100 last:border-0"
+            >
+              <td className="py-2 pr-4 text-right font-medium tabular-nums text-zinc-950">
+                {row.rank}
+              </td>
+              <td className="px-4 py-2 font-medium text-zinc-950">
+                {row.itemNumber}
+              </td>
+              <td className="max-w-[320px] truncate px-4 py-2 text-zinc-600">
+                {row.description ?? "N/A"}
+              </td>
+              <td className="px-4 py-2 text-zinc-600">
+                {categoryLabel(row.category)}
+              </td>
+              <td className="py-2 pl-4 text-right tabular-nums text-zinc-700">
+                {number(row.quantity)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function RollingDetailsCard({
+  activeTab,
+  category,
+  onCategoryChange,
+  onTabChange,
+  analytics,
+}: {
+  activeTab: DetailTab;
+  category: string;
+  onCategoryChange: (value: string) => void;
+  onTabChange: (tab: DetailTab) => void;
+  analytics: MidstateAnalyticsOverview;
+}) {
+  const categoryOptions = [
+    ...new Set(analytics.itemRankings.map((row) => categoryLabel(row.category))),
+  ].sort((a, b) => a.localeCompare(b));
+  const filteredRankings = category
+    ? analytics.itemRankings.filter(
+        (row) => categoryLabel(row.category) === category,
+      )
+    : analytics.itemRankings;
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="inline-flex rounded-md border border-zinc-200 bg-white p-0.5">
+          <DetailTabButton
+            active={activeTab === "rolling"}
+            onClick={() => onTabChange("rolling")}
+          >
+            Rolling 12-Month Table
+          </DetailTabButton>
+          <DetailTabButton
+            active={activeTab === "ranking"}
+            onClick={() => onTabChange("ranking")}
+          >
+            Item Ranking by Category
+          </DetailTabButton>
+        </div>
+        {activeTab === "ranking" ? (
+          <label className="flex min-w-56 flex-col gap-1 text-sm font-medium text-zinc-700">
+            Category
+            <select
+              value={category}
+              onChange={(event) => onCategoryChange(event.target.value)}
+              className="h-9 rounded-md border border-zinc-200 bg-white px-3 text-sm font-normal text-zinc-950 shadow-sm outline-none transition-colors focus:border-zinc-400 focus:ring-4 focus:ring-zinc-200/70"
+            >
+              <option value="">All Categories</option>
+              {categoryOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : (
+          <CardTitle>Rolling 12-Month Table</CardTitle>
+        )}
+      </CardHeader>
+      <CardContent>
+        {activeTab === "rolling" ? (
+          <RollingTable rows={analytics.overallRollingMonths} />
+        ) : (
+          <ItemRankingTable rows={filteredRankings} />
+        )}
       </CardContent>
     </Card>
   );
@@ -174,6 +323,8 @@ export function MidstateDashboard() {
     useState<QuantityChartMode>("line");
   const [overallChartMode, setOverallChartMode] =
     useState<QuantityChartMode>("line");
+  const [detailTab, setDetailTab] = useState<DetailTab>("rolling");
+  const [itemCategory, setItemCategory] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -373,7 +524,13 @@ export function MidstateDashboard() {
             </Card>
           ) : null}
 
-          <RollingTable rows={analytics.overallRollingMonths} />
+          <RollingDetailsCard
+            activeTab={detailTab}
+            category={itemCategory}
+            analytics={analytics}
+            onCategoryChange={setItemCategory}
+            onTabChange={setDetailTab}
+          />
 
           <div className="flex justify-start">
             <Button

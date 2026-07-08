@@ -186,4 +186,60 @@ describe("midstate metrics", () => {
       memberName: "Bomgaars",
     });
   });
+
+  test("ranks items by category across the latest rolling 12 months", () => {
+    const rankingRows = [
+      { postDate: new Date(2025, 4, 1), memberNumber: "82801", memberName: "Bomgaars", sku: "OLD100", description: "Old item", orderClass: "Warehouse", category: "Lawn & Garden", quantity: 999, costExt: 9990 },
+      { postDate: new Date(2025, 5, 1), memberNumber: "82801", memberName: "Bomgaars", sku: "LG200", description: "Garden tire", orderClass: "Warehouse", category: "Lawn & Garden", quantity: 40, costExt: 400 },
+      { postDate: new Date(2026, 3, 1), memberNumber: "758801", memberName: "Running Supply", sku: "BIAS300", description: "Bias tire", orderClass: "Warehouse", category: "ST Bias", quantity: 25, costExt: 625 },
+      { postDate: new Date(2026, 4, 1), memberNumber: "82801", memberName: "Bomgaars", sku: "LG200", description: "Garden tire", orderClass: "Warehouse", category: "Lawn & Garden", quantity: 35, costExt: 350 },
+      { postDate: new Date(2026, 4, 2), memberNumber: "759004", memberName: "Olney", sku: "RAD400", description: "Radial tire", orderClass: "Direct", category: "ST Radial", quantity: 90, costExt: 900 },
+    ];
+
+    const analytics = summarizeMidstateRowsForTest(rankingRows, {
+      year: 2026,
+      memberNumber: "82801",
+    });
+
+    expect(analytics.itemRankings).toEqual([
+      {
+        rank: 1,
+        itemNumber: "RAD400",
+        description: "Radial tire",
+        category: "ST Radial",
+        quantity: 90,
+      },
+      {
+        rank: 2,
+        itemNumber: "LG200",
+        description: "Garden tire",
+        category: "Lawn & Garden",
+        quantity: 75,
+      },
+      {
+        rank: 3,
+        itemNumber: "BIAS300",
+        description: "Bias tire",
+        category: "ST Bias",
+        quantity: 25,
+      },
+    ]);
+  });
+
+  test("infers common Midstate item categories when source category is blank", () => {
+    const analytics = summarizeMidstateRowsForTest(
+      [
+        { postDate: new Date(2026, 4, 1), memberNumber: "82801", memberName: "Bomgaars", sku: "ASR1200", description: "ST175/80R13 5-LUG", orderClass: "Warehouse", category: null, quantity: 10, costExt: 100 },
+        { postDate: new Date(2026, 4, 1), memberNumber: "82801", memberName: "Bomgaars", sku: "ASB1001", description: "ST175/80D13 5-LUG", orderClass: "Warehouse", category: null, quantity: 9, costExt: 90 },
+        { postDate: new Date(2026, 4, 1), memberNumber: "82801", memberName: "Bomgaars", sku: "WD1030", description: "15X6-6 SU05 LG", orderClass: "Warehouse", category: null, quantity: 8, costExt: 80 },
+      ],
+      { year: 2026 },
+    );
+
+    expect(analytics.itemRankings.map((row) => row.category)).toEqual([
+      "ST Radial",
+      "ST Bias",
+      "Lawn & Garden",
+    ]);
+  });
 });
