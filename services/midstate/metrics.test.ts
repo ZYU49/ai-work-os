@@ -143,4 +143,47 @@ describe("midstate metrics", () => {
     expect(analytics.topMembers).toHaveLength(1);
     expect(analytics.topMembers[0].name).toBe("Olney");
   });
+
+  test("builds selected member and overall rolling 12-month quantity series", () => {
+    const rollingRows = [
+      { postDate: new Date(2025, 5, 1), memberNumber: "82801", memberName: "Bomgaars", sku: "WD1030", description: "Wheel", orderClass: "Warehouse", category: null, quantity: 5, costExt: 50 },
+      { postDate: new Date(2026, 3, 1), memberNumber: "758801", memberName: "Running Supply", sku: "ASB1088", description: "Tire", orderClass: "Warehouse", category: "Lawn & Garden", quantity: 25, costExt: 625 },
+      { postDate: new Date(2026, 4, 1), memberNumber: "82801", memberName: "Bomgaars", sku: "WD1030", description: "Wheel", orderClass: "Warehouse", category: null, quantity: 200, costExt: 2000 },
+      { postDate: new Date(2026, 4, 2), memberNumber: "759004", memberName: "Olney", sku: "ASR1200", description: "Radial", orderClass: "Direct", category: "ST Radial", quantity: 10, costExt: 900 },
+    ];
+
+    const analytics = summarizeMidstateRowsForTest(
+      rollingRows,
+      {
+        year: 2026,
+        memberNumber: "82801",
+      },
+      rollingRows,
+    );
+
+    expect(analytics.rollingMonths).toHaveLength(12);
+    expect(analytics.rollingMonths[0]).toEqual({
+      month: "2025-06",
+      quantity: 5,
+    });
+    expect(analytics.rollingMonths[1]).toEqual({
+      month: "2025-07",
+      quantity: 0,
+    });
+    expect(analytics.rollingMonths.at(-1)).toEqual({
+      month: "2026-05",
+      quantity: 200,
+    });
+    expect(analytics.overallRollingMonths.at(-1)).toEqual({
+      month: "2026-05",
+      quantity: 210,
+      activeMembers: 2,
+      topMember: "Bomgaars",
+      topSku: "WD1030",
+    });
+    expect(analytics.selectedMember).toEqual({
+      memberNumber: "82801",
+      memberName: "Bomgaars",
+    });
+  });
 });

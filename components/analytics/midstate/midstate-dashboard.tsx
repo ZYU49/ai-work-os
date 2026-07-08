@@ -1,86 +1,164 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChartCard } from "@/components/analytics/chart-card";
-import { KpiCard } from "@/components/analytics/kpi-card";
-import { MonthlyTrendChart } from "@/components/analytics/monthly-trend-chart";
-import { RankingBars } from "@/components/analytics/ranking-bars";
-import { YoYComparisonChart } from "@/components/analytics/yoy-comparison-chart";
-import { MemberHeatmap } from "@/components/analytics/midstate/member-heatmap";
-import { MidstateDetailTable } from "@/components/analytics/midstate/midstate-detail-table";
 import {
   MidstateFilters,
   type MidstateDashboardFilters,
   type MidstateFilterOptions,
 } from "@/components/analytics/midstate/midstate-filters";
-import { OrderClassChart } from "@/components/analytics/midstate/order-class-chart";
+import {
+  QuantityRollingChart,
+  type QuantityChartMode,
+} from "@/components/analytics/midstate/quantity-rolling-chart";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { MidstateAnalyticsOverview } from "@/services/midstate/metrics";
 
-function money(value: number) {
-  return new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
+const defaultFilters: MidstateDashboardFilters = {
+  memberNumber: "",
+};
 
 function number(value: number) {
   return new Intl.NumberFormat().format(value);
 }
 
-function percent(value: number | null) {
-  return value === null
-    ? "N/A"
-    : new Intl.NumberFormat(undefined, {
-        style: "percent",
-        maximumFractionDigits: 1,
-      }).format(value);
+function latest<T>(rows: T[]) {
+  return rows.at(-1) ?? null;
 }
 
-const currentYear = String(new Date().getFullYear());
-
-const defaultFilters: MidstateDashboardFilters = {
-  year: currentYear,
-  startMonth: "",
-  endMonth: "",
-  memberNumber: "",
-  sku: "",
-  category: "",
-  orderClass: "",
-};
-
-function toRankingRows(
-  rows: Array<{ name: string; quantity: number; costExt: number }>,
-) {
-  return rows.map((row) => ({
-    name: row.name,
-    quantity: row.quantity,
-    revenue: row.costExt,
-  }));
+function totalQuantity(rows: Array<{ quantity: number }>) {
+  return rows.reduce((sum, row) => sum + row.quantity, 0);
 }
 
-function MidstateTextKpiCard({
-  label,
+function chartTitle(analytics: MidstateAnalyticsOverview | null) {
+  return analytics?.selectedMember
+    ? `${analytics.selectedMember.memberName} Rolling 12 Months`
+    : "Member Rolling 12 Months";
+}
+
+function summarySentence(analytics: MidstateAnalyticsOverview) {
+  const latestMonth = latest(analytics.overallRollingMonths);
+  const month = latestMonth?.month ?? "latest month";
+  const member = analytics.kpis.topMember ?? "N/A";
+  const sku = analytics.kpis.topSku ?? "N/A";
+
+  return `${month} sell-through is ${number(latestMonth?.quantity ?? 0)} units. Top member is ${member}, and top SKU is ${sku}.`;
+}
+
+function ModeToggle({
   value,
-  valueClassName,
+  onChange,
 }: {
-  label: string;
-  value: string;
-  valueClassName: string;
+  value: QuantityChartMode;
+  onChange: (value: QuantityChartMode) => void;
+}) {
+  return (
+    <div className="inline-flex rounded-md border border-zinc-200 bg-white p-0.5">
+      {(["line", "bar"] as const).map((mode) => (
+        <button
+          key={mode}
+          type="button"
+          onClick={() => onChange(mode)}
+          className={`h-8 rounded px-3 text-sm font-medium transition-colors ${
+            value === mode
+              ? "bg-zinc-950 text-white"
+              : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950"
+          }`}
+        >
+          {mode === "line" ? "Line" : "Bar"}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function RollingChartCard({
+  title,
+  data,
+  mode,
+  onModeChange,
+  emptyState,
+}: {
+  title: string;
+  data: Array<{ month: string; quantity: number }>;
+  mode: QuantityChartMode;
+  onModeChange: (mode: QuantityChartMode) => void;
+  emptyState: string;
 }) {
   return (
     <Card>
-      <CardContent className="min-w-0 p-4">
-        <p className="text-xs font-medium uppercase tracking-normal text-zinc-500">
-          {label}
-        </p>
-        <p
-          className={`mt-2 text-xl font-semibold leading-7 text-zinc-950 ${valueClassName}`}
-        >
-          {value}
-        </p>
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <CardTitle>{title}</CardTitle>
+        <ModeToggle value={mode} onChange={onModeChange} />
+      </CardHeader>
+      <CardContent>
+        <QuantityRollingChart data={data} mode={mode} emptyState={emptyState} />
+      </CardContent>
+    </Card>
+  );
+}
+
+function SummaryMetric({
+  label,
+  value,
+  detail,
+}: {
+  label: string;
+  value: string;
+  detail?: string;
+}) {
+  return (
+    <div className="min-w-0 rounded-md border border-zinc-100 bg-zinc-50 p-3">
+      <p className="text-xs font-medium uppercase tracking-normal text-zinc-500">
+        {label}
+      </p>
+      <p className="mt-1 break-words text-xl font-semibold leading-7 text-zinc-950">
+        {value}
+      </p>
+      {detail ? <p className="mt-1 text-xs text-zinc-500">{detail}</p> : null}
+    </div>
+  );
+}
+
+function RollingTable({
+  rows,
+}: {
+  rows: MidstateAnalyticsOverview["overallRollingMonths"];
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Rolling 12-Month Table</CardTitle>
+      </CardHeader>
+      <CardContent className="overflow-x-auto">
+        <table className="w-full min-w-[720px] text-sm">
+          <thead>
+            <tr className="border-b border-zinc-200 text-left text-xs font-medium uppercase tracking-normal text-zinc-500">
+              <th className="py-2 pr-4">Month</th>
+              <th className="px-4 py-2 text-right">Total Quantity</th>
+              <th className="px-4 py-2 text-right">Active Members</th>
+              <th className="px-4 py-2">Top Member</th>
+              <th className="py-2 pl-4">Top SKU</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.month} className="border-b border-zinc-100 last:border-0">
+                <td className="py-2 pr-4 font-medium text-zinc-950">{row.month}</td>
+                <td className="px-4 py-2 text-right tabular-nums">
+                  {number(row.quantity)}
+                </td>
+                <td className="px-4 py-2 text-right tabular-nums">
+                  {number(row.activeMembers)}
+                </td>
+                <td className="max-w-[260px] truncate px-4 py-2">
+                  {row.topMember ?? "N/A"}
+                </td>
+                <td className="py-2 pl-4">{row.topSku ?? "N/A"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </CardContent>
     </Card>
   );
@@ -92,6 +170,10 @@ export function MidstateDashboard() {
   );
   const [filters, setFilters] =
     useState<MidstateDashboardFilters>(defaultFilters);
+  const [memberChartMode, setMemberChartMode] =
+    useState<QuantityChartMode>("line");
+  const [overallChartMode, setOverallChartMode] =
+    useState<QuantityChartMode>("line");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -107,14 +189,13 @@ export function MidstateDashboard() {
 
     try {
       const params = new URLSearchParams();
-      for (const [key, value] of Object.entries(nextFilters)) {
-        if (value) {
-          params.set(key, value);
-        }
+      if (nextFilters.memberNumber) {
+        params.set("memberNumber", nextFilters.memberNumber);
       }
 
+      const query = params.toString();
       const response = await fetch(
-        `/api/analytics/midstate/overview?${params.toString()}`,
+        `/api/analytics/midstate/overview${query ? `?${query}` : ""}`,
         {
           cache: "no-store",
           signal: abortController.signal,
@@ -179,11 +260,7 @@ export function MidstateDashboard() {
 
   const fallbackFilterOptions = useMemo<MidstateFilterOptions>(
     () => ({
-      years: [currentYear, String(Number(currentYear) - 1)],
       members: [],
-      skus: [],
-      categories: [],
-      orderClasses: [],
     }),
     [],
   );
@@ -198,27 +275,18 @@ export function MidstateDashboard() {
     setFilters(nextFilters);
   }
 
+  const latestOverall = analytics ? latest(analytics.overallRollingMonths) : null;
+  const latestMember = analytics ? latest(analytics.rollingMonths) : null;
+  const memberData = analytics?.selectedMember ? analytics.rollingMonths : [];
+
   return (
     <div className="flex min-w-0 flex-col gap-6">
-      <div className="flex flex-col gap-3">
-        <MidstateFilters
-          filters={filters}
-          options={analytics?.filterOptions ?? fallbackFilterOptions}
-          onChange={handleFiltersChange}
-          onReset={resetFilters}
-        />
-        <div>
-          <Button
-            variant="secondary"
-            onClick={() => {
-              setIsLoading(true);
-              void loadAnalytics(filters);
-            }}
-          >
-            Refresh
-          </Button>
-        </div>
-      </div>
+      <MidstateFilters
+        filters={filters}
+        options={analytics?.filterOptions ?? fallbackFilterOptions}
+        onChange={handleFiltersChange}
+        onReset={resetFilters}
+      />
 
       {isLoading ? (
         <p className="text-sm text-zinc-500">Loading Midstate analytics</p>
@@ -234,105 +302,89 @@ export function MidstateDashboard() {
 
       {analytics ? (
         <>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <KpiCard
-              label="YTD Sell-through Qty"
-              value={number(analytics.kpis.ytdQuantity)}
-            />
-            <KpiCard
-              label="Current Month Qty"
-              value={`${number(analytics.kpis.currentMonthQuantity)} qty`}
-            />
-            <KpiCard label="YTD Cost Ext" value={money(analytics.kpis.ytdCostExt)} />
-            <KpiCard
-              label="Latest MoM"
-              value={percent(analytics.kpis.latestMoMQuantityGrowth)}
-            />
-            <KpiCard
-              label="Latest YoY"
-              value={percent(analytics.kpis.latestYoYQuantityGrowth)}
-            />
-            <KpiCard
-              label="Active Members"
-              value={number(analytics.kpis.activeMembers)}
-            />
-            <MidstateTextKpiCard
-              label="Top Member"
-              value={analytics.kpis.topMember ?? "N/A"}
-              valueClassName="break-words"
-            />
-            <MidstateTextKpiCard
-              label="Top SKU"
-              value={analytics.kpis.topSku ?? "N/A"}
-              valueClassName="break-all"
-            />
-          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Executive Summary</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm leading-6 text-zinc-600">
+                {summarySentence(analytics)}
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                <SummaryMetric
+                  label="Rolling 12 Qty"
+                  value={number(totalQuantity(analytics.overallRollingMonths))}
+                />
+                <SummaryMetric
+                  label="Latest Month Qty"
+                  value={number(latestOverall?.quantity ?? 0)}
+                  detail={latestOverall?.month}
+                />
+                <SummaryMetric
+                  label="Active Members"
+                  value={number(latestOverall?.activeMembers ?? 0)}
+                />
+                <SummaryMetric
+                  label="Top Member"
+                  value={analytics.kpis.topMember ?? "N/A"}
+                />
+                <SummaryMetric label="Top SKU" value={analytics.kpis.topSku ?? "N/A"} />
+              </div>
+            </CardContent>
+          </Card>
 
-          <ChartCard title="Monthly Quantity and Cost Ext">
-            <MonthlyTrendChart
-              data={analytics.monthly.map((point) => ({
-                ...point,
-                revenue: point.costExt,
-              }))}
-              labels={{
-                valueLabel: "Cost Ext",
-                emptyState: "No Midstate monthly data yet.",
+          <RollingChartCard
+            title={chartTitle(analytics)}
+            data={memberData}
+            mode={memberChartMode}
+            onModeChange={setMemberChartMode}
+            emptyState="Select a member to view its rolling 12-month trend."
+          />
+
+          <RollingChartCard
+            title="Midstate Overall Rolling 12 Months"
+            data={analytics.overallRollingMonths}
+            mode={overallChartMode}
+            onModeChange={setOverallChartMode}
+            emptyState="No Midstate rolling data yet."
+          />
+
+          {analytics.selectedMember ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Selected Member Snapshot</CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-3 sm:grid-cols-3">
+                <SummaryMetric
+                  label="Member"
+                  value={analytics.selectedMember.memberName}
+                  detail={analytics.selectedMember.memberNumber}
+                />
+                <SummaryMetric
+                  label="Rolling 12 Qty"
+                  value={number(totalQuantity(analytics.rollingMonths))}
+                />
+                <SummaryMetric
+                  label="Latest Month Qty"
+                  value={number(latestMember?.quantity ?? 0)}
+                  detail={latestMember?.month}
+                />
+              </CardContent>
+            </Card>
+          ) : null}
+
+          <RollingTable rows={analytics.overallRollingMonths} />
+
+          <div className="flex justify-start">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setIsLoading(true);
+                void loadAnalytics(filters);
               }}
-            />
-          </ChartCard>
-
-          <ChartCard title="YoY Quantity Comparison">
-            <YoYComparisonChart data={analytics.yoyComparison} />
-          </ChartCard>
-
-          <ChartCard title="Warehouse vs Direct">
-            <OrderClassChart data={analytics.orderClassMonthly} />
-          </ChartCard>
-
-          <div className="grid min-w-0 gap-6 lg:grid-cols-2">
-            <ChartCard title="Top Members">
-              <RankingBars data={toRankingRows(analytics.topMembers)} />
-            </ChartCard>
-            <ChartCard title="Top SKUs">
-              <RankingBars
-                data={analytics.topSkus.map((sku) => ({
-                  name: sku.description ? `${sku.name} - ${sku.description}` : sku.name,
-                  quantity: sku.quantity,
-                  revenue: sku.costExt,
-                }))}
-              />
-            </ChartCard>
-          </div>
-
-          <ChartCard title="Member Heatmap">
-            <MemberHeatmap data={analytics.memberHeatmap} />
-          </ChartCard>
-
-          <div className="grid min-w-0 gap-6 xl:grid-cols-2">
-            <ChartCard title="Member Details">
-              <MidstateDetailTable
-                columns={[
-                  { key: "memberName", label: "Member" },
-                  { key: "memberNumber", label: "Member #" },
-                  { key: "quantity", label: "Quantity", align: "right" },
-                  { key: "costExt", label: "Cost Ext", align: "right" },
-                  { key: "topSku", label: "Top SKU" },
-                ]}
-                rows={analytics.memberRows}
-              />
-            </ChartCard>
-            <ChartCard title="SKU Details">
-              <MidstateDetailTable
-                columns={[
-                  { key: "sku", label: "SKU" },
-                  { key: "description", label: "Description" },
-                  { key: "quantity", label: "Quantity", align: "right" },
-                  { key: "costExt", label: "Cost Ext", align: "right" },
-                  { key: "topMember", label: "Top Member" },
-                ]}
-                rows={analytics.skuRows}
-              />
-            </ChartCard>
+            >
+              Refresh
+            </Button>
           </div>
         </>
       ) : null}

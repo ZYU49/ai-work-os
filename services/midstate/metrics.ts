@@ -52,6 +52,21 @@ export type MidstateAnalyticsOverview = {
     topMember: string | null;
     topSku: string | null;
   };
+  selectedMember: {
+    memberNumber: string;
+    memberName: string;
+  } | null;
+  rollingMonths: Array<{
+    month: string;
+    quantity: number;
+  }>;
+  overallRollingMonths: Array<{
+    month: string;
+    quantity: number;
+    activeMembers: number;
+    topMember: string | null;
+    topSku: string | null;
+  }>;
   monthly: Array<{
     month: string;
     quantity: number;
@@ -173,6 +188,25 @@ function previousMonthKey(month: string) {
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
+function addMonthsToMonthKey(month: string, offset: number) {
+  const [yearText, monthText] = month.split("-");
+  const date = new Date(Date.UTC(Number(yearText), Number(monthText) - 1, 1));
+  date.setUTCMonth(date.getUTCMonth() + offset);
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+function rollingMonthKeys(latestMonth: string, count = 12) {
+  return Array.from({ length: count }, (_, index) =>
+    addMonthsToMonthKey(latestMonth, index - count + 1),
+  );
+}
+
+function latestMonthKey(rows: MidstateMetricRow[]) {
+  return rows
+    .map((row) => monthKey(row.postDate))
+    .sort((a, b) => b.localeCompare(a))[0];
+}
+
 function monthLabel(month: number) {
   return new Intl.DateTimeFormat(undefined, { month: "short" }).format(
     new Date(2026, month - 1, 1),
@@ -226,6 +260,17 @@ function matchesFilters(
   );
 }
 
+function matchesFiltersWithoutMember(
+  row: MidstateMetricRow,
+  filters: MidstateAnalyticsFilters,
+) {
+  return (
+    (!filters.sku || row.sku === filters.sku) &&
+    (!filters.category || row.category === filters.category) &&
+    (!filters.orderClass || row.orderClass === filters.orderClass)
+  );
+}
+
 function topMapKey(map: Map<string, number>) {
   return [...map.entries()].sort(
     ([aKey, aValue], [bKey, bValue]) =>
@@ -235,6 +280,44 @@ function topMapKey(map: Map<string, number>) {
 
 function memberOptionLabel(row: MidstateMetricRow) {
   return `${row.memberName} (${row.memberNumber})`;
+}
+
+function quantityRollingMonths(rows: MidstateMetricRow[], keys: string[]) {
+  const totals = new Map<string, number>();
+
+  for (const row of rows) {
+    const key = monthKey(row.postDate);
+    totals.set(key, (totals.get(key) ?? 0) + row.quantity);
+  }
+
+  return keys.map((month) => ({
+    month,
+    quantity: totals.get(month) ?? 0,
+  }));
+}
+
+function overallRollingMonths(rows: MidstateMetricRow[], keys: string[]) {
+  return keys.map((month) => {
+    const monthRows = rows.filter((row) => monthKey(row.postDate) === month);
+    const memberTotals = new Map<string, number>();
+    const skuTotals = new Map<string, number>();
+
+    for (const row of monthRows) {
+      memberTotals.set(
+        row.memberName,
+        (memberTotals.get(row.memberName) ?? 0) + row.quantity,
+      );
+      skuTotals.set(row.sku, (skuTotals.get(row.sku) ?? 0) + row.quantity);
+    }
+
+    return {
+      month,
+      quantity: monthRows.reduce((sum, row) => sum + row.quantity, 0),
+      activeMembers: new Set(monthRows.map((row) => row.memberNumber)).size,
+      topMember: topMapKey(memberTotals),
+      topSku: topMapKey(skuTotals),
+    };
+  });
 }
 
 export function summarizeMidstateRowsForTest(
@@ -425,6 +508,20 @@ export function summarizeMidstateRowsForTest(
       ]),
     ).values(),
   ].sort((a, b) => a.label.localeCompare(b.label));
+  const latestRollingMonth =
+    latestMonthKey(filterOptionRows) ??
+    latestMonthKey(rows) ??
+    `${year}-${String(endMonth).padStart(2, "0")}`;
+  const rollingKeys = rollingMonthKeys(latestRollingMonth);
+  const rollingRows = rows.filter((row) => matchesFilters(row, parsedFilters));
+  const overallRows = filterOptionRows.filter((row) =>
+    matchesFiltersWithoutMember(row, parsedFilters),
+  );
+  const selectedMember = parsedFilters.memberNumber
+    ? (filterOptionRows.find(
+        (row) => row.memberNumber === parsedFilters.memberNumber,
+      ) ?? null)
+    : null;
 
   return {
     kpis: {
@@ -437,6 +534,14 @@ export function summarizeMidstateRowsForTest(
       topMember: topMembers[0]?.name ?? null,
       topSku: topSkus[0]?.name ?? null,
     },
+    selectedMember: selectedMember
+      ? {
+          memberNumber: selectedMember.memberNumber,
+          memberName: selectedMember.memberName,
+        }
+      : null,
+    rollingMonths: quantityRollingMonths(rollingRows, rollingKeys),
+    overallRollingMonths: overallRollingMonths(overallRows, rollingKeys),
     monthly,
     yoyComparison,
     orderClassMonthly,

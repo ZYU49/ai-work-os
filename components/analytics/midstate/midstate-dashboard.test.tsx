@@ -3,10 +3,10 @@
 import "@testing-library/jest-dom/vitest";
 import {
   cleanup,
+  fireEvent,
   render,
   screen,
   waitFor,
-  within,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { MidstateDashboard } from "@/components/analytics/midstate/midstate-dashboard";
@@ -39,28 +39,32 @@ const currentYear = String(new Date().getFullYear());
 const priorYear = String(Number(currentYear) - 1);
 
 function createAnalyticsResponse({
-  monthly = [
-    {
-      month: `${currentYear}-05`,
-      quantity: 14757,
-      costExt: 371155,
-      momQuantityGrowth: null,
-      yoyQuantityGrowth: null,
-    },
-  ],
   topMember = "Bomgaars Supply, Inc.",
   topSku = "WD1030",
+  selectedMember = null,
 }: {
-  monthly?: Array<{
-    month: string;
-    quantity: number;
-    costExt: number;
-    momQuantityGrowth: number | null;
-    yoyQuantityGrowth: number | null;
-  }>;
   topMember?: string;
   topSku?: string;
+  selectedMember?: {
+    memberNumber: string;
+    memberName: string;
+  } | null;
 } = {}) {
+  const rollingMonths = [
+    { month: `${priorYear}-06`, quantity: 0 },
+    { month: `${priorYear}-07`, quantity: 0 },
+    { month: `${priorYear}-08`, quantity: 0 },
+    { month: `${priorYear}-09`, quantity: 0 },
+    { month: `${priorYear}-10`, quantity: 0 },
+    { month: `${priorYear}-11`, quantity: 0 },
+    { month: `${priorYear}-12`, quantity: 0 },
+    { month: `${currentYear}-01`, quantity: 0 },
+    { month: `${currentYear}-02`, quantity: 0 },
+    { month: `${currentYear}-03`, quantity: 0 },
+    { month: `${currentYear}-04`, quantity: 0 },
+    { month: `${currentYear}-05`, quantity: 14757 },
+  ];
+
   return {
     analytics: {
       kpis: {
@@ -73,7 +77,20 @@ function createAnalyticsResponse({
         topMember,
         topSku,
       },
-      monthly,
+      selectedMember,
+      rollingMonths,
+      overallRollingMonths: rollingMonths.map((point) => ({
+        ...point,
+        activeMembers: point.quantity > 0 ? 19 : 0,
+        topMember: point.quantity > 0 ? "Bomgaars Supply, Inc." : null,
+        topSku: point.quantity > 0 ? "WD1030" : null,
+      })),
+      monthly: rollingMonths.map((point) => ({
+        ...point,
+        costExt: point.quantity > 0 ? 371155 : 0,
+        momQuantityGrowth: null,
+        yoyQuantityGrowth: null,
+      })),
       yoyComparison: [
         {
           month: "05",
@@ -151,7 +168,7 @@ describe("MidstateDashboard", () => {
     vi.unstubAllGlobals();
   });
 
-  test("loads and renders Midstate analytics", async () => {
+  test("loads and renders the rolling quantity dashboard", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
@@ -162,45 +179,51 @@ describe("MidstateDashboard", () => {
 
     render(<MidstateDashboard />);
 
-    expect(await screen.findByText("YTD Sell-through Qty")).toBeInTheDocument();
-    expect(screen.getByText("14,757")).toBeInTheDocument();
-    expect(screen.getByText("Top Members")).toBeInTheDocument();
+    expect(await screen.findByText("Executive Summary")).toBeInTheDocument();
+    expect(screen.getAllByText("14,757").length).toBeGreaterThan(0);
+    expect(screen.getByText("Member Rolling 12 Months")).toBeInTheDocument();
+    expect(screen.getByText("Midstate Overall Rolling 12 Months")).toBeInTheDocument();
+    expect(screen.getByText("Rolling 12-Month Table")).toBeInTheDocument();
+    expect(screen.queryByText("YTD Cost Ext")).not.toBeInTheDocument();
     await waitFor(() => {
       expect(fetch).toHaveBeenCalledWith(
-        `/api/analytics/midstate/overview?year=${currentYear}`,
+        "/api/analytics/midstate/overview",
         expect.objectContaining({ cache: "no-store" }),
       );
     });
   });
 
-  test("labels cost ext monthly data without sales or revenue wording", async () => {
+  test("sends the selected member filter and labels selected member trend", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue({
+      vi.fn().mockResolvedValueOnce({
         ok: true,
         json: async () => createAnalyticsResponse(),
-      }),
-    );
-
-    render(<MidstateDashboard />);
-
-    expect((await screen.findAllByText("Cost Ext")).length).toBeGreaterThan(0);
-    expect(screen.queryByText("Revenue")).not.toBeInTheDocument();
-  });
-
-  test("uses a Midstate monthly empty state when monthly rows are absent", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
+      }).mockResolvedValueOnce({
         ok: true,
-        json: async () => createAnalyticsResponse({ monthly: [] }),
+        json: async () =>
+          createAnalyticsResponse({
+            selectedMember: {
+              memberNumber: "82801",
+              memberName: "Bomgaars Supply, Inc.",
+            },
+          }),
       }),
     );
 
     render(<MidstateDashboard />);
 
-    expect(await screen.findByText("No Midstate monthly data yet.")).toBeVisible();
-    expect(screen.queryByText(/sales data/i)).not.toBeInTheDocument();
+    fireEvent.change(await screen.findByLabelText("Member"), {
+      target: { value: "82801" },
+    });
+
+    expect(await screen.findByText("Bomgaars Supply, Inc. Rolling 12 Months")).toBeVisible();
+    await waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith(
+        "/api/analytics/midstate/overview?memberNumber=82801",
+        expect.objectContaining({ cache: "no-store" }),
+      ),
+    );
   });
 
   test("keeps long Top Member and Top SKU values inside their KPI cards", async () => {
@@ -220,25 +243,15 @@ describe("MidstateDashboard", () => {
     render(<MidstateDashboard />);
 
     expect(await screen.findByText(longTopMember)).toHaveClass("break-words");
-    expect(screen.getByText(longTopSku)).toHaveClass("break-all");
+    expect(screen.getByText(longTopSku)).toHaveClass("break-words");
   });
 
-  test("uses clear month filter placeholder labels", () => {
+  test("renders only the member filter for the rolling dashboard", () => {
     const filters: MidstateDashboardFilters = {
-      year: currentYear,
-      startMonth: "",
-      endMonth: "",
       memberNumber: "",
-      sku: "",
-      category: "",
-      orderClass: "",
     };
     const options: MidstateFilterOptions = {
-      years: [currentYear],
       members: [],
-      skus: [],
-      categories: [],
-      orderClasses: [],
     };
 
     render(
@@ -250,16 +263,9 @@ describe("MidstateDashboard", () => {
       />,
     );
 
-    const startMonth = screen.getByLabelText("Start");
-    const endMonth = screen.getByLabelText("End");
-
-    expect(
-      within(startMonth).getByRole("option", { name: "No start limit" }),
-    ).toHaveValue("");
-    expect(
-      within(endMonth).getByRole("option", { name: "No end limit" }),
-    ).toHaveValue("");
-    expect(within(startMonth).getAllByRole("option", { name: "Jan" })).toHaveLength(1);
-    expect(within(endMonth).getAllByRole("option", { name: "Dec" })).toHaveLength(1);
+    expect(screen.getByLabelText("Member")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Start")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("End")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("SKU")).not.toBeInTheDocument();
   });
 });
