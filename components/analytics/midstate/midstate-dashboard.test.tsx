@@ -90,14 +90,14 @@ function createAnalyticsResponse({
           rank: 1,
           itemNumber: "RAD400",
           description: "Radial tire",
-          category: "ST Radial",
+          category: "STR ASSEMBLY",
           quantity: 90,
         },
         {
           rank: 2,
           itemNumber: "LG200",
           description: "Garden tire",
-          category: "Lawn & Garden",
+          category: "L&G Tires",
           quantity: 75,
         },
       ],
@@ -167,7 +167,7 @@ function createAnalyticsResponse({
         years: [currentYear],
         members: [{ value: "82801", label: "Bomgaars Supply, Inc." }],
         skus: ["WD1030"],
-        categories: ["Lawn & Garden", "ST Radial"],
+        categories: ["L&G Tires", "STR ASSEMBLY"],
         orderClasses: ["Warehouse", "Direct"],
       },
     },
@@ -270,7 +270,7 @@ describe("MidstateDashboard", () => {
     expect(screen.getByText(longTopSku)).toHaveClass("break-words");
   });
 
-  test("shows item ranking by category under the rolling table", async () => {
+  test("shows item ranking by item group under the rolling table", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
@@ -282,16 +282,16 @@ describe("MidstateDashboard", () => {
     render(<MidstateDashboard />);
 
     fireEvent.click(await screen.findByRole("button", {
-      name: "Item Ranking by Category",
+      name: "Item Ranking by Item Group",
     }));
 
-    expect(screen.getByLabelText("Category")).toBeInTheDocument();
+    expect(screen.getByLabelText("Item Group")).toBeInTheDocument();
     expect(screen.getByText("RAD400")).toBeVisible();
     expect(screen.getByText("Radial tire")).toBeVisible();
     expect(screen.getByText("90")).toBeVisible();
 
-    fireEvent.change(screen.getByLabelText("Category"), {
-      target: { value: "Lawn & Garden" },
+    fireEvent.change(screen.getByLabelText("Item Group"), {
+      target: { value: "L&G Tires" },
     });
 
     expect(screen.getByText("LG200")).toBeVisible();

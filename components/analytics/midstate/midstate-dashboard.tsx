@@ -197,7 +197,7 @@ function ItemRankingTable({
   if (rows.length === 0) {
     return (
       <p className="py-8 text-center text-sm text-zinc-500">
-        No item rankings for this category.
+        No item rankings for this item group.
       </p>
     );
   }
@@ -210,7 +210,7 @@ function ItemRankingTable({
             <th className="py-2 pr-4 text-right">Ranking</th>
             <th className="px-4 py-2">Item Number</th>
             <th className="px-4 py-2">Description</th>
-            <th className="px-4 py-2">Category</th>
+            <th className="px-4 py-2">Item Group</th>
             <th className="py-2 pl-4 text-right">Qty</th>
           </tr>
         </thead>
@@ -279,18 +279,18 @@ function RollingDetailsCard({
             active={activeTab === "ranking"}
             onClick={() => onTabChange("ranking")}
           >
-            Item Ranking by Category
+            Item Ranking by Item Group
           </DetailTabButton>
         </div>
         {activeTab === "ranking" ? (
           <label className="flex min-w-56 flex-col gap-1 text-sm font-medium text-zinc-700">
-            Category
+            Item Group
             <select
               value={category}
               onChange={(event) => onCategoryChange(event.target.value)}
               className="h-9 rounded-md border border-zinc-200 bg-white px-3 text-sm font-normal text-zinc-950 shadow-sm outline-none transition-colors focus:border-zinc-400 focus:ring-4 focus:ring-zinc-200/70"
             >
-              <option value="">All Categories</option>
+              <option value="">All Item Groups</option>
               {categoryOptions.map((option) => (
                 <option key={option} value={option}>
                   {option}

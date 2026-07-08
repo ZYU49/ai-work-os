@@ -226,7 +226,7 @@ describe("midstate metrics", () => {
     ]);
   });
 
-  test("infers common Midstate item categories when source category is blank", () => {
+  test("uses item master groups when source category is blank", () => {
     const analytics = summarizeMidstateRowsForTest(
       [
         { postDate: new Date(2026, 4, 1), memberNumber: "82801", memberName: "Bomgaars", sku: "ASR1200", description: "ST175/80R13 5-LUG", orderClass: "Warehouse", category: null, quantity: 10, costExt: 100 },
@@ -237,13 +237,13 @@ describe("midstate metrics", () => {
     );
 
     expect(analytics.itemRankings.map((row) => row.category)).toEqual([
-      "ST Radial",
-      "ST Bias",
-      "Lawn & Garden",
+      "STR ASSEMBLY",
+      "STD ASSEMBLY",
+      "L&G Tires",
     ]);
   });
 
-  test("uses the item master description and item group category when available", () => {
+  test("uses the item master description and item group when available", () => {
     const analytics = summarizeMidstateRowsForTest(
       [
         { postDate: new Date(2026, 4, 1), memberNumber: "82801", memberName: "Bomgaars", sku: "WD1030", description: "15X6-6 SU05 LG", orderClass: "Warehouse", category: null, quantity: 12, costExt: 120 },
@@ -254,7 +254,7 @@ describe("midstate metrics", () => {
     expect(analytics.itemRankings[0]).toMatchObject({
       itemNumber: "WD1030",
       description: "15X6.00-6 2PR SU05 HI-RUN",
-      category: "Lawn & Garden",
+      category: "L&G Tires",
       quantity: 12,
     });
   });
