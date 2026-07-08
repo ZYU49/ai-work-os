@@ -257,6 +257,33 @@ describe("midstate imports", () => {
     expect(result.replacedImports).toBe(2);
   });
 
+  test("cleans up replaced upload files after the database transaction succeeds", async () => {
+    vi.mocked(prisma.midstateImport.findMany).mockResolvedValue([
+      { id: "old-import-1", storagePath: "storage/uploads/old-1.xlsx" },
+      { id: "old-import-2", storagePath: "storage/uploads/old-2.xlsx" },
+    ] as never);
+
+    await commitMidstateImport("import-1", {
+      replaceExisting: true,
+    });
+
+    expect(deleteStoredFile).toHaveBeenCalledWith("storage/uploads/old-1.xlsx");
+    expect(deleteStoredFile).toHaveBeenCalledWith("storage/uploads/old-2.xlsx");
+    expect(
+      vi.mocked(prisma.$transaction).mock.invocationCallOrder[0],
+    ).toBeLessThan(vi.mocked(deleteStoredFile).mock.invocationCallOrder[0]);
+  });
+
+  test("reports a replacement prompt when imported period uniqueness is hit", async () => {
+    vi.mocked(prisma.$transaction).mockRejectedValueOnce(
+      Object.assign(new Error("Unique constraint failed"), { code: "P2002" }),
+    );
+
+    await expect(commitMidstateImport("import-1")).rejects.toThrow(
+      "Midstate period already exists. Confirm replacement to continue.",
+    );
+  });
+
   test("deletes current import records before reinserting", async () => {
     await commitMidstateImport("import-1");
 
@@ -327,6 +354,22 @@ describe("midstate imports", () => {
           "Row 3: Member Name is required. SKU is required. Qty Shipped is invalid.",
       }),
     });
+  });
+
+  test("rejects rows with invalid nonblank Cost Ext values", async () => {
+    vi.mocked(rowsFromMidstateWorkbook).mockReturnValue([
+      validMidstateRow({ "Cost Ext": "bad-cost-ext" }),
+    ]);
+
+    const result = await commitMidstateImport("import-1");
+
+    expect(result).toMatchObject({
+      totalRows: 1,
+      importedRows: 0,
+      rejectedRows: 1,
+      errors: ["Row 2: Cost Ext is invalid."],
+    });
+    expect(prisma.midstateSellThroughRecord.createMany).not.toHaveBeenCalled();
   });
 
   test("reports source worksheet row number for invalid target-period rows after skipped rows", async () => {

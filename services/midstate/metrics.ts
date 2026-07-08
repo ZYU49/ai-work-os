@@ -251,13 +251,21 @@ export function summarizeMidstateRowsForTest(
       monthInRange(row.postDate.getMonth() + 1, startMonth, endMonth) &&
       matchesFilters(row, parsedFilters),
   );
+  const ytdRows = rows.filter(
+    (row) =>
+      row.postDate.getFullYear() === year &&
+      row.postDate.getMonth() + 1 <= endMonth &&
+      matchesFilters(row, parsedFilters),
+  );
   const priorRows = rows.filter(
     (row) =>
       row.postDate.getFullYear() === year - 1 &&
       monthInRange(row.postDate.getMonth() + 1, startMonth, endMonth) &&
       matchesFilters(row, parsedFilters),
   );
+  const growthRows = rows.filter((row) => matchesFilters(row, parsedFilters));
   const monthlyMap = new Map<string, MetricTotals>();
+  const growthMonthlyMap = new Map<string, MetricTotals>();
   const priorMonthlyMap = new Map<string, MetricTotals>();
   const orderClassMonthlyMap = new Map<
     string,
@@ -327,6 +335,11 @@ export function summarizeMidstateRowsForTest(
     heatmap.set(row.memberNumber, heatmapRow);
   }
 
+  for (const row of growthRows) {
+    const key = monthKey(row.postDate);
+    growthMonthlyMap.set(key, addTotals(growthMonthlyMap.get(key), row));
+  }
+
   for (const row of priorRows) {
     const key = `${year}-${String(row.postDate.getMonth() + 1).padStart(2, "0")}`;
     priorMonthlyMap.set(key, addTotals(priorMonthlyMap.get(key), row));
@@ -335,7 +348,7 @@ export function summarizeMidstateRowsForTest(
   const monthly = [...monthlyMap.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([month, value]) => {
-      const previous = monthlyMap.get(previousMonthKey(month));
+      const previous = growthMonthlyMap.get(previousMonthKey(month));
       const prior = priorMonthlyMap.get(month);
 
       return {
@@ -415,9 +428,9 @@ export function summarizeMidstateRowsForTest(
 
   return {
     kpis: {
-      ytdQuantity: currentRows.reduce((sum, row) => sum + row.quantity, 0),
+      ytdQuantity: ytdRows.reduce((sum, row) => sum + row.quantity, 0),
       currentMonthQuantity: latestMonth?.quantity ?? 0,
-      ytdCostExt: currentRows.reduce((sum, row) => sum + costExt(row), 0),
+      ytdCostExt: ytdRows.reduce((sum, row) => sum + costExt(row), 0),
       latestMoMQuantityGrowth: latestMonth?.momQuantityGrowth ?? null,
       latestYoYQuantityGrowth: latestMonth?.yoyQuantityGrowth ?? null,
       activeMembers: new Set(currentRows.map((row) => row.memberNumber)).size,

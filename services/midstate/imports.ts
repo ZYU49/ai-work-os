@@ -53,6 +53,30 @@ async function cleanupSavedUpload(storagePath: string) {
   }
 }
 
+async function cleanupReplacedUploads(storagePaths: string[]) {
+  await Promise.all(
+    storagePaths.map(async (storagePath) => {
+      try {
+        await deleteStoredFile(storagePath);
+      } catch (cleanupError) {
+        console.error(
+          "Failed to clean up replaced midstate upload",
+          cleanupError,
+        );
+      }
+    }),
+  );
+}
+
+function isUniqueConstraintError(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === "P2002"
+  );
+}
+
 function validateFileName(fileName: string) {
   if (!/\.(xlsx|xls)$/i.test(fileName)) {
     throw new Error("Upload a Midstate Excel workbook.");
@@ -134,7 +158,7 @@ export async function commitMidstateImport(
 
   const existingImports = await prisma.midstateImport.findMany({
     where: existingPeriodWhere(midstateImport),
-    select: { id: true },
+    select: { id: true, storagePath: true },
   });
 
   if (existingImports.length > 0 && !replaceExisting) {
@@ -171,42 +195,56 @@ export async function commitMidstateImport(
     });
   });
 
-  await prisma.$transaction(
-    async (tx: Prisma.TransactionClient) => {
-      if (replaceExisting && existingImports.length > 0) {
-        await tx.midstateImport.deleteMany({
-          where: { id: { in: existingImports.map((item) => item.id) } },
+  try {
+    await prisma.$transaction(
+      async (tx: Prisma.TransactionClient) => {
+        if (replaceExisting && existingImports.length > 0) {
+          await tx.midstateImport.deleteMany({
+            where: { id: { in: existingImports.map((item) => item.id) } },
+          });
+        }
+
+        await tx.midstateSellThroughRecord.deleteMany({ where: { importId } });
+
+        for (
+          let index = 0;
+          index < records.length;
+          index += MIDSTATE_IMPORT_BATCH_SIZE
+        ) {
+          await tx.midstateSellThroughRecord.createMany({
+            data: records.slice(index, index + MIDSTATE_IMPORT_BATCH_SIZE),
+          });
+        }
+
+        await tx.midstateImport.update({
+          where: { id: importId },
+          data: {
+            status: MidstateImportStatus.imported,
+            totalRows: targetRows.length,
+            importedRows: records.length,
+            rejectedRows,
+            errorMessage:
+              errors.length > 0 ? errors.slice(0, 10).join("\n") : null,
+          },
         });
-      }
+      },
+      {
+        timeout: MIDSTATE_IMPORT_TRANSACTION_TIMEOUT_MS,
+        maxWait: MIDSTATE_IMPORT_TRANSACTION_MAX_WAIT_MS,
+      },
+    );
+  } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      throw new Error(EXISTING_PERIOD_ERROR);
+    }
+    throw error;
+  }
 
-      await tx.midstateSellThroughRecord.deleteMany({ where: { importId } });
-
-      for (
-        let index = 0;
-        index < records.length;
-        index += MIDSTATE_IMPORT_BATCH_SIZE
-      ) {
-        await tx.midstateSellThroughRecord.createMany({
-          data: records.slice(index, index + MIDSTATE_IMPORT_BATCH_SIZE),
-        });
-      }
-
-      await tx.midstateImport.update({
-        where: { id: importId },
-        data: {
-          status: MidstateImportStatus.imported,
-          totalRows: targetRows.length,
-          importedRows: records.length,
-          rejectedRows,
-          errorMessage: errors.length > 0 ? errors.slice(0, 10).join("\n") : null,
-        },
-      });
-    },
-    {
-      timeout: MIDSTATE_IMPORT_TRANSACTION_TIMEOUT_MS,
-      maxWait: MIDSTATE_IMPORT_TRANSACTION_MAX_WAIT_MS,
-    },
-  );
+  if (replaceExisting && existingImports.length > 0) {
+    await cleanupReplacedUploads(
+      existingImports.map((item) => item.storagePath),
+    );
+  }
 
   return {
     importId,

@@ -73,6 +73,22 @@ function numberValue(value: unknown) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function optionalNumberValue(value: unknown) {
+  if (typeof value === "number") {
+    return Number.isFinite(value)
+      ? { value, invalid: false }
+      : { value: null, invalid: true };
+  }
+
+  const text = textValue(value);
+  if (!text) return { value: null, invalid: false };
+
+  const parsed = Number(text.replaceAll(",", "").replace(/^\((.*)\)$/, "-$1"));
+  return Number.isFinite(parsed)
+    ? { value: parsed, invalid: false }
+    : { value: null, invalid: true };
+}
+
 function dateValue(value: unknown) {
   if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
   if (typeof value === "number") {
@@ -282,8 +298,8 @@ export function normalizeMidstateRow(
   const sku = textValue(row.VIN);
   const orderClass = textValue(row["Order Class"]);
   const quantity = numberValue(row["Qty Shipped"]);
-  const cost = numberValue(row.Cost);
-  const costExt = numberValue(row["Cost Ext"]);
+  const cost = optionalNumberValue(row.Cost);
+  const costExt = optionalNumberValue(row["Cost Ext"]);
 
   if (!postDate) errors.push("Post Date is invalid.");
   if (!memberNumber) errors.push("Member Number is required.");
@@ -291,6 +307,8 @@ export function normalizeMidstateRow(
   if (!sku) errors.push("SKU is required.");
   if (!orderClass) errors.push("Order Class is required.");
   if (quantity === null) errors.push("Qty Shipped is invalid.");
+  if (cost.invalid) errors.push("Cost is invalid.");
+  if (costExt.invalid) errors.push("Cost Ext is invalid.");
 
   if (
     !postDate ||
@@ -298,7 +316,9 @@ export function normalizeMidstateRow(
     !memberName ||
     !sku ||
     !orderClass ||
-    quantity === null
+    quantity === null ||
+    cost.invalid ||
+    costExt.invalid
   ) {
     return { ok: false, errors };
   }
@@ -316,8 +336,8 @@ export function normalizeMidstateRow(
       description: textValue(row.Description),
       orderClass,
       quantity,
-      cost,
-      costExt,
+      cost: cost.value,
+      costExt: costExt.value,
     },
   };
 }

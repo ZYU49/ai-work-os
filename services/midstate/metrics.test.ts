@@ -100,6 +100,34 @@ describe("midstate metrics", () => {
     expect(may?.yoyQuantityGrowth).toBe(1.1);
   });
 
+  test("keeps YTD through selected end month when the displayed range starts later", () => {
+    const analytics = summarizeMidstateRowsForTest(rows, {
+      year: 2026,
+      startMonth: 5,
+      endMonth: 5,
+    });
+
+    expect(analytics.monthly.map((month) => month.month)).toEqual(["2026-05"]);
+    expect(analytics.kpis.ytdQuantity).toBe(285);
+    expect(analytics.kpis.ytdCostExt).toBe(4025);
+    expect(analytics.kpis.currentMonthQuantity).toBe(210);
+  });
+
+  test("computes MoM against the prior month outside the displayed range", () => {
+    const analytics = summarizeMidstateRowsForTest(rows, {
+      year: 2026,
+      startMonth: 5,
+      endMonth: 5,
+    });
+
+    expect(analytics.monthly[0]).toMatchObject({
+      month: "2026-05",
+      quantity: 210,
+      momQuantityGrowth: 7.4,
+    });
+    expect(analytics.kpis.latestMoMQuantityGrowth).toBe(7.4);
+  });
+
   test("applies member, sku, category, and order class filters", () => {
     const analytics = summarizeMidstateRowsForTest(rows, {
       year: 2026,

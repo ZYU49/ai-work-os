@@ -260,6 +260,54 @@ describe("midstate parser", () => {
     });
   });
 
+  test("keeps blank optional Cost and Cost Ext values as null", () => {
+    const result = normalizeMidstateRow({
+      "Vendor Name": "Sutong Tire Resources",
+      "MS Item Number": 10047919,
+      Description: "LG 15X6-6 WHT",
+      VIN: "ASB1088",
+      "Member Name": "Running Supply, Inc.",
+      "Member Number": "758801",
+      "Vendor Number": "1001718",
+      "Order Class": "Warehouse",
+      "Qty Shipped": 2,
+      "Post Date": new Date(2026, 4, 2),
+      Cost: "",
+      "Cost Ext": "   ",
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      record: {
+        cost: null,
+        costExt: null,
+      },
+    });
+  });
+
+  test("rejects invalid nonblank optional Cost and Cost Ext values", () => {
+    const result = normalizeMidstateRow({
+      "Vendor Name": "Sutong Tire Resources",
+      "MS Item Number": 10047919,
+      Description: "LG 15X6-6 WHT",
+      VIN: "ASB1088",
+      "Member Name": "Running Supply, Inc.",
+      "Member Number": "758801",
+      "Vendor Number": "1001718",
+      "Order Class": "Warehouse",
+      "Qty Shipped": 2,
+      "Post Date": new Date(2026, 4, 2),
+      Cost: "not-a-cost",
+      "Cost Ext": "not-a-cost-ext",
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toContain("Cost is invalid.");
+      expect(result.errors).toContain("Cost Ext is invalid.");
+    }
+  });
+
   test("rejects invalid required values", () => {
     const result = normalizeMidstateRow({
       "Member Name": "",
