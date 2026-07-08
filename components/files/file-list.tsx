@@ -1,6 +1,12 @@
 "use client";
 
-import { AlertCircle, FileText, RefreshCw, Search } from "lucide-react";
+import {
+  AlertCircle,
+  ExternalLink,
+  FileText,
+  RefreshCw,
+  Search,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -98,6 +104,10 @@ function formatDate(value: string) {
 
 function metadata(value: FileListItem["metadata"]): FileMetadata {
   return value && typeof value === "object" ? value : {};
+}
+
+function fileDownloadHref(file: FileListItem) {
+  return `/api/files/${file.id}/download`;
 }
 
 export function FileList({ refreshKey = 0 }: FileListProps) {
@@ -279,9 +289,18 @@ export function FileList({ refreshKey = 0 }: FileListProps) {
                   return (
                     <tr key={file.id} className="bg-white hover:bg-zinc-50">
                       <td className="px-4 py-3">
-                        <div className="font-medium text-zinc-950">
+                        <a
+                          href={fileDownloadHref(file)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex max-w-lg items-center gap-2 font-medium text-zinc-950 hover:underline"
+                        >
                           {details.originalName ?? file.filename}
-                        </div>
+                          <ExternalLink
+                            className="size-3.5 shrink-0 text-zinc-400"
+                            aria-hidden="true"
+                          />
+                        </a>
                         <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-zinc-500">
                           <span>{file.mimeType ?? "Unknown type"}</span>
                           <span>{formatBytes(file.size)}</span>

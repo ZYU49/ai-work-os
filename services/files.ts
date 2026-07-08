@@ -103,6 +103,13 @@ export async function listFiles(filters: FileFilters = {}) {
   });
 }
 
+export async function getFileAssetById(id: string) {
+  return prisma.fileAsset.findUnique({
+    where: { id },
+    include: fileListInclude,
+  });
+}
+
 export async function createFileAsset(input: CreateFileAssetInput) {
   const parsedInput = createFileAssetSchema.parse(input);
 

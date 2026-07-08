@@ -282,7 +282,9 @@ export function ProjectTabs({ projectId }: ProjectTabsProps) {
           renderItem={(file) => (
             <div key={file.id} className="px-4 py-3">
               <a
-                href={file.url}
+                href={`/api/files/${file.id}/download`}
+                target="_blank"
+                rel="noreferrer"
                 className="font-medium text-zinc-950 hover:underline"
               >
                 {file.filename}

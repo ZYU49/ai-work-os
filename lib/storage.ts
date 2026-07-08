@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, unlink, writeFile } from "node:fs/promises";
+import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { basename, extname, join, resolve, sep } from "node:path";
 
 export const DEFAULT_FILE_UPLOAD_MAX_BYTES = 25 * 1024 * 1024;
@@ -13,11 +13,14 @@ export type SavedUploadedFile = {
 };
 
 function uploadRoot() {
-  return process.env.FILE_STORAGE_ROOT ?? join("storage", "uploads");
+  return (
+    process.env.FILE_STORAGE_ROOT ??
+    join(/* turbopackIgnore: true */ process.cwd(), "storage", "uploads")
+  );
 }
 
 function resolvedUploadRoot() {
-  return resolve(uploadRoot());
+  return uploadRoot();
 }
 
 function isInsideUploadRoot(storagePath: string) {
@@ -127,4 +130,14 @@ export async function deleteStoredFile(storagePath: string) {
 
     throw error;
   }
+}
+
+export async function readStoredFile(storagePath: string) {
+  if (!isInsideUploadRoot(storagePath)) {
+    const error = new Error("Stored file path is outside the upload root.");
+    Object.assign(error, { code: "EACCES" });
+    throw error;
+  }
+
+  return readFile(/* turbopackIgnore: true */ storagePath);
 }
