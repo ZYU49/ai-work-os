@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AnalyticsDashboard } from "@/components/analytics/analytics-dashboard";
+import { AnalyticsSectionSwitcher } from "@/components/analytics/analytics-section-switcher";
 
 const primaryLinkClass =
   "inline-flex h-9 items-center justify-center rounded-md bg-zinc-950 px-3 text-sm font-medium text-white shadow-sm transition-colors hover:bg-zinc-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950";
@@ -21,9 +22,6 @@ export default function AnalyticsPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link href="/analytics/midstate" className={secondaryLinkClass}>
-            Midstate Analytics
-          </Link>
           <Link href="/analytics/midstate/import" className={secondaryLinkClass}>
             Import Midstate
           </Link>
@@ -32,6 +30,7 @@ export default function AnalyticsPage() {
           </Link>
         </div>
       </div>
+      <AnalyticsSectionSwitcher current="sales" />
       <AnalyticsDashboard />
     </div>
   );

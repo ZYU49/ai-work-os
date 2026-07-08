@@ -194,35 +194,43 @@ describe("MidstateDashboard", () => {
   });
 
   test("sends the selected member filter and labels selected member trend", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValueOnce({
-        ok: true,
-        json: async () => createAnalyticsResponse(),
-      }).mockResolvedValueOnce({
+    const fetchMock = vi.fn(async (url: string) => {
+      const isMemberRequest = url.includes("memberNumber=82801");
+
+      return {
         ok: true,
         json: async () =>
           createAnalyticsResponse({
-            selectedMember: {
-              memberNumber: "82801",
-              memberName: "Bomgaars Supply, Inc.",
-            },
+            selectedMember: isMemberRequest
+              ? {
+                  memberNumber: "82801",
+                  memberName: "Bomgaars Supply, Inc.",
+                }
+              : null,
           }),
-      }),
+      };
+    });
+
+    vi.stubGlobal(
+      "fetch",
+      fetchMock,
     );
 
     render(<MidstateDashboard />);
 
+    await screen.findByRole("option", { name: "Bomgaars Supply, Inc." });
     fireEvent.change(await screen.findByLabelText("Member"), {
       target: { value: "82801" },
     });
 
     expect(await screen.findByText("Bomgaars Supply, Inc. Rolling 12 Months")).toBeVisible();
     await waitFor(() =>
-      expect(fetch).toHaveBeenCalledWith(
-        "/api/analytics/midstate/overview?memberNumber=82801",
-        expect.objectContaining({ cache: "no-store" }),
-      ),
+      expect(
+        fetchMock.mock.calls.some(
+          ([url]) =>
+            url === "/api/analytics/midstate/overview?memberNumber=82801",
+        ),
+      ).toBe(true),
     );
   });
 

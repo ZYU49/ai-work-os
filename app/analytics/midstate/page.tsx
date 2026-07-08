@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AnalyticsSectionSwitcher } from "@/components/analytics/analytics-section-switcher";
 import { MidstateDashboard } from "@/components/analytics/midstate/midstate-dashboard";
 
 export default function MidstateAnalyticsPage() {
@@ -20,6 +21,7 @@ export default function MidstateAnalyticsPage() {
           Import Midstate File
         </Link>
       </div>
+      <AnalyticsSectionSwitcher current="midstate" />
       <MidstateDashboard />
     </div>
   );
