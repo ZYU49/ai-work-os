@@ -356,11 +356,7 @@ export function extractMidstatePreview(input: {
   validateHeaders(headers);
 
   const { periodYear, periodMonth } = targetPeriodForRows(rows, input.fileName);
-  const targetRows = filterMidstateRowsForPeriod(rows, {
-    periodYear,
-    periodMonth,
-  });
-  const normalized = targetRows.map(normalizeMidstateRow);
+  const normalized = rows.map(normalizeMidstateRow);
   const valid = normalized.flatMap((row) => (row.ok ? [row.record] : []));
   const totalQuantity = valid.reduce((sum, row) => sum + row.quantity, 0);
   const warehouseQuantity = valid
@@ -376,8 +372,8 @@ export function extractMidstatePreview(input: {
   return {
     sheetName: MIDSTATE_RAW_DATA_SHEET,
     headers,
-    previewRows: targetRows.slice(0, 10),
-    totalRows: targetRows.length,
+    previewRows: rows.slice(0, 10),
+    totalRows: rows.length,
     totalQuantity,
     warehouseQuantity,
     directQuantity,

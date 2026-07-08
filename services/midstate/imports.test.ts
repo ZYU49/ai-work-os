@@ -188,7 +188,7 @@ describe("midstate imports", () => {
     });
   });
 
-  test("commits only rows for the persisted Midstate import period", async () => {
+  test("commits every valid row from a rolling Midstate workbook", async () => {
     vi.mocked(rowsFromMidstateWorkbook).mockReturnValue([
       validMidstateRow({
         VIN: "OLD2025",
@@ -221,12 +221,14 @@ describe("midstate imports", () => {
     const result = await commitMidstateImport("import-1");
 
     expect(result).toMatchObject({
-      totalRows: 2,
-      importedRows: 2,
+      totalRows: 4,
+      importedRows: 4,
       rejectedRows: 0,
     });
     expect(prisma.midstateSellThroughRecord.createMany).toHaveBeenCalledWith({
       data: [
+        expect.objectContaining({ sku: "OLD2025", quantity: 100 }),
+        expect.objectContaining({ sku: "APR2026", quantity: 50 }),
         expect.objectContaining({ sku: "MAY-WH", quantity: 3 }),
         expect.objectContaining({ sku: "MAY-DIR", quantity: 2 }),
       ],
@@ -234,8 +236,8 @@ describe("midstate imports", () => {
     expect(prisma.midstateImport.update).toHaveBeenCalledWith({
       where: { id: "import-1" },
       data: expect.objectContaining({
-        totalRows: 2,
-        importedRows: 2,
+        totalRows: 4,
+        importedRows: 4,
         rejectedRows: 0,
       }),
     });
@@ -372,7 +374,7 @@ describe("midstate imports", () => {
     expect(prisma.midstateSellThroughRecord.createMany).not.toHaveBeenCalled();
   });
 
-  test("reports source worksheet row number for invalid target-period rows after skipped rows", async () => {
+  test("reports source worksheet row number for invalid rolling workbook rows", async () => {
     vi.mocked(rowsFromMidstateWorkbook).mockReturnValue([
       validMidstateRow({
         VIN: "APR2026",
@@ -389,6 +391,11 @@ describe("midstate imports", () => {
 
     const result = await commitMidstateImport("import-1");
 
+    expect(result).toMatchObject({
+      totalRows: 3,
+      importedRows: 2,
+      rejectedRows: 1,
+    });
     expect(result.errors).toEqual([
       "Row 4: Member Name is required. SKU is required. Qty Shipped is invalid.",
     ]);

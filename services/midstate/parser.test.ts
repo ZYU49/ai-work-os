@@ -78,7 +78,7 @@ describe("midstate parser", () => {
     expect(preview.vendorNumber).toBe("1001718");
   });
 
-  test("extracts a May file preview from only May rows when RAW DATA rolls across months", () => {
+  test("extracts a May rolling file preview from every RAW DATA month", () => {
     const buffer = workbookBuffer([
       headers,
       [
@@ -144,19 +144,21 @@ describe("midstate parser", () => {
       fileName: "1001718 May 2026.xlsx",
     });
 
-    expect(preview.totalRows).toBe(2);
-    expect(preview.totalQuantity).toBe(5);
-    expect(preview.warehouseQuantity).toBe(3);
+    expect(preview.totalRows).toBe(4);
+    expect(preview.totalQuantity).toBe(155);
+    expect(preview.warehouseQuantity).toBe(153);
     expect(preview.directQuantity).toBe(2);
-    expect(preview.memberCount).toBe(2);
-    expect(preview.skuCount).toBe(2);
+    expect(preview.memberCount).toBe(4);
+    expect(preview.skuCount).toBe(4);
     expect(preview.dateRange).toEqual({
-      start: "2026-05-01",
+      start: "2025-06-02",
       end: "2026-05-30",
     });
     expect(preview.periodYear).toBe(2026);
     expect(preview.periodMonth).toBe(5);
     expect(preview.previewRows.map((row) => row.VIN)).toEqual([
+      "OLD2025",
+      "APR2026",
       "MAY-WH",
       "MAY-DIR",
     ]);
@@ -202,9 +204,14 @@ describe("midstate parser", () => {
 
     expect(preview.periodYear).toBe(2026);
     expect(preview.periodMonth).toBe(5);
-    expect(preview.totalRows).toBe(1);
-    expect(preview.totalQuantity).toBe(2);
-    expect(preview.previewRows.map((row) => row.VIN)).toEqual(["MAY-LATEST"]);
+    expect(preview.totalRows).toBe(4);
+    expect(preview.totalQuantity).toBe(32);
+    expect(preview.previewRows.map((row) => row.VIN)).toEqual([
+      "APR-0",
+      "APR-1",
+      "APR-2",
+      "MAY-LATEST",
+    ]);
   });
 
   test("validates RAW DATA headers when the sheet has no data rows", () => {
