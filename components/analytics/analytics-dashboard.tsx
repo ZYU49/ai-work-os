@@ -17,8 +17,6 @@ type SalesAnalytics = {
   kpis: {
     ytdQuantity: number;
     ytdRevenue: number;
-    averageUnitPrice: number | null;
-    activeCustomers: number;
   };
   monthly: Array<{
     month: string;
@@ -266,14 +264,6 @@ export function AnalyticsDashboard() {
             <KpiCard label="YTD Quantity" value={number(analytics.kpis.ytdQuantity)} />
             <KpiCard label="YTD Sales" value={money(analytics.kpis.ytdRevenue)} />
             <KpiCard
-              label="Avg Unit Price"
-              value={
-                analytics.kpis.averageUnitPrice === null
-                  ? "N/A"
-                  : money(analytics.kpis.averageUnitPrice)
-              }
-            />
-            <KpiCard
               label="Latest MoM"
               value={`Qty ${percent(latestMonth?.momQuantityGrowth ?? null)}`}
               detail={`Rev ${percent(latestMonth?.momRevenueGrowth ?? null)}${latestMonth ? ` · ${latestMonth.month}` : ""}`}
@@ -282,10 +272,6 @@ export function AnalyticsDashboard() {
               label="Latest YoY"
               value={`Qty ${percent(latestMonth?.yoyQuantityGrowth ?? null)}`}
               detail={`Rev ${percent(latestMonth?.yoyRevenueGrowth ?? null)}${latestMonth ? ` · ${latestMonth.month}` : ""}`}
-            />
-            <KpiCard
-              label="Active Customers"
-              value={number(analytics.kpis.activeCustomers)}
             />
           </div>
 

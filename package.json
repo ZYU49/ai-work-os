@@ -12,6 +12,7 @@
     "test:e2e": "node scripts/use-node24.cjs playwright test",
     "prisma:generate": "node scripts/use-node24.cjs prisma generate --config prisma/prisma.config.ts",
     "prisma:migrate": "node scripts/use-node24.cjs prisma migrate dev --config prisma/prisma.config.ts",
+    "prisma:migrate:deploy": "node scripts/use-node24.cjs prisma migrate deploy --config prisma/prisma.config.ts",
     "db:seed": "node scripts/use-node24.cjs tsx prisma/seed.ts"
   },
   "dependencies": {

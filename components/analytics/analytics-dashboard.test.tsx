@@ -174,12 +174,12 @@ describe("AnalyticsDashboard", () => {
 
     expect((await screen.findAllByText("1,200")).length).toBeGreaterThan(0);
     expect(screen.getByText("$456,000")).toBeVisible();
-    expect(screen.getByText("$380")).toBeVisible();
     expect(screen.getByText("Qty 40%")).toBeVisible();
     expect(screen.getByText(/Rev 53\.3%/i)).toBeVisible();
     expect(screen.getByText("Qty 20%")).toBeVisible();
     expect(screen.getByText(/Rev 25%/i)).toBeVisible();
-    expect(screen.getByText("14")).toBeVisible();
+    expect(screen.queryByText("Avg Unit Price")).not.toBeInTheDocument();
+    expect(screen.queryByText("Active Customers")).not.toBeInTheDocument();
     expect(screen.getByText("YoY Quantity Comparison")).toBeVisible();
     expect(screen.getAllByText("Scope: 2026 YTD Jan-Jun").length).toBeGreaterThan(0);
     expect(screen.getByText("2026 Qty")).toBeVisible();

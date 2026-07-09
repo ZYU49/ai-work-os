@@ -47,6 +47,8 @@ next-env.d.ts
 # local file uploads
 /storage/uploads/*
 !/storage/uploads/.gitkeep
+/storage/backups/*
+!/storage/backups/.gitkeep
 
 # local feature worktrees
 /.worktrees/

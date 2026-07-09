@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 const { spawnSync } = require("node:child_process");
+const fs = require("node:fs");
 const path = require("node:path");
 
 const projectRoot = path.resolve(__dirname, "..");
@@ -33,12 +34,13 @@ if (!command || !bins[command]) {
 }
 
 const target = path.join(projectRoot, bins[command]);
+const nodeBinary = fs.existsSync(bundledNode) ? bundledNode : process.execPath;
 const env = {
   ...process.env,
-  PATH: `${path.dirname(bundledNode)}${path.delimiter}${process.env.PATH || ""}`,
+  PATH: `${path.dirname(nodeBinary)}${path.delimiter}${process.env.PATH || ""}`,
 };
 
-const result = spawnSync(bundledNode, [target, ...args], {
+const result = spawnSync(nodeBinary, [target, ...args], {
   cwd: projectRoot,
   env,
   stdio: "inherit",
