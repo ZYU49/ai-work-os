@@ -199,7 +199,8 @@ describe("MidstateDashboard", () => {
     expect(screen.getAllByText("14,757").length).toBeGreaterThan(0);
     expect(screen.getByText("Member Rolling 12 Months")).toBeInTheDocument();
     expect(screen.getByText("Midstate Overall Rolling 12 Months")).toBeInTheDocument();
-    expect(screen.getAllByText("Rolling 12-Month Table").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Rolling 12-Month Table")).not.toBeInTheDocument();
+    expect(screen.getByText("Item Ranking by Item Group")).toBeInTheDocument();
     expect(screen.queryByText("YTD Cost Ext")).not.toBeInTheDocument();
     expect(screen.getAllByText("Members").length).toBeGreaterThan(0);
     expect(screen.queryByText("Active Members")).not.toBeInTheDocument();
@@ -273,7 +274,7 @@ describe("MidstateDashboard", () => {
     expect(screen.getByText(longTopSku)).toHaveClass("break-words");
   });
 
-  test("shows item ranking by item group under the rolling table", async () => {
+  test("shows item ranking by item group without the rolling table", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
@@ -284,11 +285,7 @@ describe("MidstateDashboard", () => {
 
     render(<MidstateDashboard />);
 
-    fireEvent.click(await screen.findByRole("button", {
-      name: "Item Ranking by Item Group",
-    }));
-
-    expect(screen.getByLabelText("Item Group")).toBeInTheDocument();
+    expect(await screen.findByLabelText("Item Group")).toBeInTheDocument();
     expect(screen.getByText("RAD400")).toBeVisible();
     expect(screen.getByText("Radial tire")).toBeVisible();
     expect(screen.getByText("90")).toBeVisible();

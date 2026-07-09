@@ -18,8 +18,6 @@ const defaultFilters: MidstateDashboardFilters = {
   memberNumber: "",
 };
 
-type DetailTab = "rolling" | "ranking";
-
 function number(value: number) {
   return new Intl.NumberFormat().format(value);
 }
@@ -126,69 +124,6 @@ function SummaryMetric({
   );
 }
 
-function RollingTable({
-  rows,
-}: {
-  rows: MidstateAnalyticsOverview["overallRollingMonths"];
-}) {
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[720px] text-sm">
-        <thead>
-          <tr className="border-b border-zinc-200 text-left text-xs font-medium uppercase tracking-normal text-zinc-500">
-            <th className="py-2 pr-4">Month</th>
-            <th className="px-4 py-2 text-right">Total Quantity</th>
-            <th className="px-4 py-2 text-right">Members</th>
-            <th className="px-4 py-2">Top Member</th>
-            <th className="py-2 pl-4">Top SKU</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.month} className="border-b border-zinc-100 last:border-0">
-              <td className="py-2 pr-4 font-medium text-zinc-950">{row.month}</td>
-              <td className="px-4 py-2 text-right tabular-nums">
-                {number(row.quantity)}
-              </td>
-              <td className="px-4 py-2 text-right tabular-nums">
-                {number(row.activeMembers)}
-              </td>
-              <td className="max-w-[260px] truncate px-4 py-2">
-                {row.topMember ?? "N/A"}
-              </td>
-              <td className="py-2 pl-4">{row.topSku ?? "N/A"}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function DetailTabButton({
-  active,
-  children,
-  onClick,
-}: {
-  active: boolean;
-  children: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`h-8 rounded px-3 text-sm font-medium transition-colors ${
-        active
-          ? "bg-zinc-950 text-white"
-          : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950"
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
-
 function ItemRankingTable({
   rows,
 }: {
@@ -243,17 +178,13 @@ function ItemRankingTable({
   );
 }
 
-function RollingDetailsCard({
-  activeTab,
+function ItemRankingCard({
   category,
   onCategoryChange,
-  onTabChange,
   analytics,
 }: {
-  activeTab: DetailTab;
   category: string;
   onCategoryChange: (value: string) => void;
-  onTabChange: (tab: DetailTab) => void;
   analytics: MidstateAnalyticsOverview;
 }) {
   const categoryOptions = [
@@ -268,46 +199,27 @@ function RollingDetailsCard({
   return (
     <Card>
       <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="inline-flex rounded-md border border-zinc-200 bg-white p-0.5">
-          <DetailTabButton
-            active={activeTab === "rolling"}
-            onClick={() => onTabChange("rolling")}
-          >
-            Rolling 12-Month Table
-          </DetailTabButton>
-          <DetailTabButton
-            active={activeTab === "ranking"}
-            onClick={() => onTabChange("ranking")}
-          >
-            Item Ranking by Item Group
-          </DetailTabButton>
+        <div>
+          <CardTitle>Item Ranking by Item Group</CardTitle>
         </div>
-        {activeTab === "ranking" ? (
-          <label className="flex min-w-56 flex-col gap-1 text-sm font-medium text-zinc-700">
-            Item Group
-            <select
-              value={category}
-              onChange={(event) => onCategoryChange(event.target.value)}
-              className="h-9 rounded-md border border-zinc-200 bg-white px-3 text-sm font-normal text-zinc-950 shadow-sm outline-none transition-colors focus:border-zinc-400 focus:ring-4 focus:ring-zinc-200/70"
-            >
-              <option value="">All Item Groups</option>
-              {categoryOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : (
-          <CardTitle>Rolling 12-Month Table</CardTitle>
-        )}
+        <label className="flex min-w-56 flex-col gap-1 text-sm font-medium text-zinc-700">
+          Item Group
+          <select
+            value={category}
+            onChange={(event) => onCategoryChange(event.target.value)}
+            className="h-9 rounded-md border border-zinc-200 bg-white px-3 text-sm font-normal text-zinc-950 shadow-sm outline-none transition-colors focus:border-zinc-400 focus:ring-4 focus:ring-zinc-200/70"
+          >
+            <option value="">All Item Groups</option>
+            {categoryOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </label>
       </CardHeader>
       <CardContent>
-        {activeTab === "rolling" ? (
-          <RollingTable rows={analytics.overallRollingMonths} />
-        ) : (
-          <ItemRankingTable rows={filteredRankings} />
-        )}
+        <ItemRankingTable rows={filteredRankings} />
       </CardContent>
     </Card>
   );
@@ -323,7 +235,6 @@ export function MidstateDashboard() {
     useState<QuantityChartMode>("line");
   const [overallChartMode, setOverallChartMode] =
     useState<QuantityChartMode>("line");
-  const [detailTab, setDetailTab] = useState<DetailTab>("rolling");
   const [itemCategory, setItemCategory] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -524,12 +435,10 @@ export function MidstateDashboard() {
             </Card>
           ) : null}
 
-          <RollingDetailsCard
-            activeTab={detailTab}
+          <ItemRankingCard
             category={itemCategory}
             analytics={analytics}
             onCategoryChange={setItemCategory}
-            onTabChange={setDetailTab}
           />
 
           <div className="flex justify-start">
