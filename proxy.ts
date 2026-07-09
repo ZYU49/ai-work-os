@@ -1,30 +1,49 @@
 import { NextResponse, type NextRequest } from "next/server";
 import {
-  buildBasicAuthChallenge,
+  AUTH_SESSION_COOKIE,
   isBasicAuthAuthorized,
+  verifyAuthSessionToken,
 } from "@/lib/auth/basic-auth";
 
-const AUTH_REALM = "AI Work OS";
+function isPublicPath(pathname: string) {
+  return pathname === "/login" || pathname === "/api/auth/login";
+}
 
-export function proxy(request: NextRequest) {
-  const isAuthorized = isBasicAuthAuthorized(
-    request.headers.get("authorization"),
-    {
-      username: process.env.APP_ACCESS_USERNAME || "allen",
-      password: process.env.APP_ACCESS_PASSWORD,
-    },
-  );
+function loginRedirect(request: NextRequest) {
+  const url = new URL("/login", request.url);
+  const nextPath = `${request.nextUrl.pathname}${request.nextUrl.search}`;
+  url.searchParams.set("next", nextPath);
 
-  if (isAuthorized) {
+  return NextResponse.redirect(url);
+}
+
+export async function proxy(request: NextRequest) {
+  if (isPublicPath(request.nextUrl.pathname)) {
     return NextResponse.next();
   }
 
-  return new NextResponse("Authentication required.", {
-    status: 401,
-    headers: {
-      "WWW-Authenticate": buildBasicAuthChallenge(AUTH_REALM),
-    },
-  });
+  const config = {
+    username: process.env.APP_ACCESS_USERNAME || "allen",
+    password: process.env.APP_ACCESS_PASSWORD,
+  };
+  const basicAuthIsAuthorized = isBasicAuthAuthorized(
+    request.headers.get("authorization"),
+    config,
+  );
+  const cookieIsAuthorized = await verifyAuthSessionToken(
+    request.cookies.get(AUTH_SESSION_COOKIE)?.value,
+    config,
+  );
+
+  if (basicAuthIsAuthorized || cookieIsAuthorized) {
+    return NextResponse.next();
+  }
+
+  if (request.nextUrl.pathname.startsWith("/api/")) {
+    return NextResponse.json({ error: "Authentication required." }, { status: 401 });
+  }
+
+  return loginRedirect(request);
 }
 
 export const config = {

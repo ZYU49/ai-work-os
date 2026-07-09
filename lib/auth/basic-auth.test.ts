@@ -1,7 +1,9 @@
 import { describe, expect, test } from "vitest";
 import {
   buildBasicAuthChallenge,
+  createAuthSessionToken,
   isBasicAuthAuthorized,
+  verifyAuthSessionToken,
 } from "@/lib/auth/basic-auth";
 
 function basicHeader(username: string, password: string) {
@@ -51,5 +53,60 @@ describe("basic auth", () => {
     expect(buildBasicAuthChallenge("AI Work OS")).toBe(
       'Basic realm="AI Work OS", charset="UTF-8"',
     );
+  });
+
+  test("creates and verifies a cookie session token", async () => {
+    const token = await createAuthSessionToken({
+      username: "allen",
+      password: "1234",
+    });
+
+    await expect(
+      verifyAuthSessionToken(token, {
+        username: "allen",
+        password: "1234",
+      }),
+    ).resolves.toBe(true);
+  });
+
+  test("rejects cookie session tokens with the wrong password or username", async () => {
+    const token = await createAuthSessionToken({
+      username: "allen",
+      password: "1234",
+    });
+
+    await expect(
+      verifyAuthSessionToken(token, {
+        username: "allen",
+        password: "wrong",
+      }),
+    ).resolves.toBe(false);
+    await expect(
+      verifyAuthSessionToken(token, {
+        username: "richard",
+        password: "1234",
+      }),
+    ).resolves.toBe(false);
+  });
+
+  test("rejects expired cookie session tokens", async () => {
+    const token = await createAuthSessionToken(
+      {
+        username: "allen",
+        password: "1234",
+      },
+      new Date("2026-01-01T00:00:00.000Z"),
+    );
+
+    await expect(
+      verifyAuthSessionToken(
+        token,
+        {
+          username: "allen",
+          password: "1234",
+        },
+        new Date("2026-02-15T00:00:00.000Z"),
+      ),
+    ).resolves.toBe(false);
   });
 });
