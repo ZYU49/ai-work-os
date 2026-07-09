@@ -73,7 +73,7 @@ function createAnalyticsResponse({
         ytdCostExt: 371155,
         latestMoMQuantityGrowth: null,
         latestYoYQuantityGrowth: null,
-        activeMembers: 19,
+        activeMembers: 21,
         topMember,
         topSku,
       },
@@ -201,6 +201,9 @@ describe("MidstateDashboard", () => {
     expect(screen.getByText("Midstate Overall Rolling 12 Months")).toBeInTheDocument();
     expect(screen.getAllByText("Rolling 12-Month Table").length).toBeGreaterThan(0);
     expect(screen.queryByText("YTD Cost Ext")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Members").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Active Members")).not.toBeInTheDocument();
+    expect(screen.getByText("21")).toBeInTheDocument();
     await waitFor(() => {
       expect(fetch).toHaveBeenCalledWith(
         "/api/analytics/midstate/overview",

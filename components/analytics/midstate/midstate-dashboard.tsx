@@ -138,7 +138,7 @@ function RollingTable({
           <tr className="border-b border-zinc-200 text-left text-xs font-medium uppercase tracking-normal text-zinc-500">
             <th className="py-2 pr-4">Month</th>
             <th className="px-4 py-2 text-right">Total Quantity</th>
-            <th className="px-4 py-2 text-right">Active Members</th>
+            <th className="px-4 py-2 text-right">Members</th>
             <th className="px-4 py-2">Top Member</th>
             <th className="py-2 pl-4">Top SKU</th>
           </tr>
@@ -472,8 +472,8 @@ export function MidstateDashboard() {
                   detail={latestOverall?.month}
                 />
                 <SummaryMetric
-                  label="Active Members"
-                  value={number(latestOverall?.activeMembers ?? 0)}
+                  label="Members"
+                  value={number(analytics.kpis.activeMembers)}
                 />
                 <SummaryMetric
                   label="Top Member"
