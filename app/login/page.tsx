@@ -13,7 +13,7 @@ export default async function LoginPage({
     <div className="mx-auto flex min-h-[calc(100vh-8rem)] w-full max-w-md items-center">
       <div className="w-full rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
         <div className="mb-6">
-          <p className="text-sm font-medium text-zinc-500">AI Work OS</p>
+          <p className="text-sm font-medium text-zinc-500">SalesDesk</p>
           <h1 className="mt-2 text-2xl font-semibold text-zinc-950">
             Sign in to workspace
           </h1>

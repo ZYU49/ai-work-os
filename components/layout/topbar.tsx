@@ -7,7 +7,7 @@ export function Topbar() {
       <div className="min-w-0">
         <p className="text-sm font-semibold text-zinc-950">Workspace</p>
         <p className="truncate text-xs text-zinc-500">
-          Projects, notes, mail, files, and agent work
+          Sales, customers, files, notes, and follow-up work
         </p>
       </div>
 

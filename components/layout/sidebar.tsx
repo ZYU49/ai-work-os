@@ -38,13 +38,13 @@ export function Sidebar() {
     <aside className="flex border-b border-zinc-200 bg-white md:min-h-screen md:w-64 md:flex-col md:border-b-0 md:border-r">
       <div className="flex h-14 shrink-0 items-center gap-3 border-r border-zinc-200 px-4 md:h-16 md:border-r-0 md:border-b">
         <div className="flex size-8 items-center justify-center rounded-md bg-zinc-950 text-sm font-semibold text-white">
-          AI
+          SD
         </div>
         <div className="hidden min-w-0 md:block">
           <p className="truncate text-sm font-semibold text-zinc-950">
-            AI Work OS
+            SalesDesk
           </p>
-          <p className="truncate text-xs text-zinc-500">MVP workspace</p>
+          <p className="truncate text-xs text-zinc-500">Sales workspace</p>
         </div>
       </div>
 

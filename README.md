@@ -1,6 +1,6 @@
-# AI Work OS
+# SalesDesk
 
-Personal AI-centered work platform for projects, pasted mail, files, notes, tasks, daily logs, search, and an Agent workspace.
+Sales workspace for analytics, customer projects, pasted mail, files, notes, tasks, daily logs, search, and an assistant workspace.
 
 ## Requirements
 

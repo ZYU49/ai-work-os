@@ -1,6 +1,6 @@
-# AI Work OS Online Deployment
+# SalesDesk Online Deployment
 
-This guide deploys AI Work OS as an online demo that Allen can open from China.
+This guide deploys SalesDesk as an online demo that Allen can open from China.
 
 ## Recommended Stack
 

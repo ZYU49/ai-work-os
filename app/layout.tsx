@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AI Work OS",
-  description: "Personal AI work platform for projects, mail, files, tasks, notes, and daily logs.",
+  title: "SalesDesk",
+  description: "Sales workspace for analytics, customers, files, tasks, notes, and daily logs.",
 };
 
 export default function RootLayout({

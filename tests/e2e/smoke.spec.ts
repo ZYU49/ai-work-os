@@ -131,7 +131,7 @@ test("core MVP pages render from the app shell", async ({ page }) => {
 
   await page.goto("/dashboard");
 
-  await expect(page.getByText("AI Work OS")).toBeVisible();
+  await expect(page.getByText("SalesDesk")).toBeVisible();
   await expect(page.getByText("Workspace", { exact: true })).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Dashboard", level: 1 }),
