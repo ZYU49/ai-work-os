@@ -2,6 +2,9 @@
   "name": "ai-work-os",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "dev": "node scripts/use-node24.cjs next dev",
     "build": "node scripts/use-node24.cjs next build",
