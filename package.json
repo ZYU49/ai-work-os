@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "node scripts/use-node24.cjs next dev",
-    "build": "node scripts/use-node24.cjs next build",
+    "build": "npm run prisma:generate && node scripts/use-node24.cjs next build",
     "start": "node scripts/use-node24.cjs next start",
     "lint": "node scripts/use-node24.cjs eslint .",
     "test": "node scripts/use-node24.cjs vitest run --passWithNoTests",
