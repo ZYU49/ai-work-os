@@ -195,6 +195,9 @@ function ItemRankingCard({
         (row) => categoryLabel(row.category) === category,
       )
     : analytics.itemRankings;
+  const displayedRankings = category
+    ? filteredRankings.map((row, index) => ({ ...row, rank: index + 1 }))
+    : filteredRankings;
 
   return (
     <Card>
@@ -219,7 +222,7 @@ function ItemRankingCard({
         </label>
       </CardHeader>
       <CardContent>
-        <ItemRankingTable rows={filteredRankings} />
+        <ItemRankingTable rows={displayedRankings} />
       </CardContent>
     </Card>
   );

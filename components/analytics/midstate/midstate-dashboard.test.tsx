@@ -6,6 +6,7 @@ import {
   fireEvent,
   render,
   screen,
+  within,
   waitFor,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
@@ -289,14 +290,21 @@ describe("MidstateDashboard", () => {
     expect(screen.getByText("RAD400")).toBeVisible();
     expect(screen.getByText("Radial tire")).toBeVisible();
     expect(screen.getByText("90")).toBeVisible();
+    expect(
+      within(screen.getByRole("table")).getByRole("row", {
+        name: /2 LG200 Garden tire L&G Tires 75/,
+      }),
+    ).toBeVisible();
 
     fireEvent.change(screen.getByLabelText("Item Group"), {
       target: { value: "L&G Tires" },
     });
 
-    expect(screen.getByText("LG200")).toBeVisible();
-    expect(screen.getByText("Garden tire")).toBeVisible();
-    expect(screen.getByText("75")).toBeVisible();
+    expect(
+      within(screen.getByRole("table")).getByRole("row", {
+        name: /1 LG200 Garden tire L&G Tires 75/,
+      }),
+    ).toBeVisible();
     expect(screen.queryByText("RAD400")).not.toBeInTheDocument();
   });
 
