@@ -11,7 +11,7 @@ describe("MidstateItemMaster", () => {
     vi.unstubAllGlobals();
   });
 
-  test("shows one readable product row with UoM and hides zero dimensions", async () => {
+  test("shows one readable product row with UoM and no dimensions column", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
@@ -46,7 +46,9 @@ describe("MidstateItemMaster", () => {
     });
 
     expect(within(row).getByText("EA")).toBeInTheDocument();
-    expect(within(row).getByText("N/A")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("columnheader", { name: "Dimensions" }),
+    ).not.toBeInTheDocument();
     expect(
       within(row).getByText(
         "ST175/80D13 6PR HI RUN SCap & 13X4.5 5-4.5 WHITE WHEEL (8 SPOKE)",

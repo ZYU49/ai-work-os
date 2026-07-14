@@ -36,19 +36,6 @@ function number(value: number | null) {
   return new Intl.NumberFormat().format(value);
 }
 
-function dimensions(item: MidstateItem) {
-  const values = [item.length, item.width, item.height];
-
-  if (
-    values.every((value) => value === null) ||
-    values.every((value) => value === null || value === 0)
-  ) {
-    return "N/A";
-  }
-
-  return `${number(item.length)} x ${number(item.width)} x ${number(item.height)}`;
-}
-
 export function MidstateItemMaster() {
   const [items, setItems] = useState<MidstateItem[]>([]);
   const [itemGroups, setItemGroups] = useState<string[]>([]);
@@ -220,7 +207,6 @@ export function MidstateItemMaster() {
                   <th className="px-4 py-2">Item Group</th>
                   <th className="px-4 py-2">UoM</th>
                   <th className="px-4 py-2">Size</th>
-                  <th className="px-4 py-2">Dimensions</th>
                   <th className="px-4 py-2 text-right">Weight</th>
                   <th className="py-2 pl-4">Status</th>
                 </tr>
@@ -245,9 +231,6 @@ export function MidstateItemMaster() {
                     </td>
                     <td className="px-4 py-2 text-zinc-600">
                       {item.size ?? "N/A"}
-                    </td>
-                    <td className="px-4 py-2 text-zinc-600">
-                      {dimensions(item)}
                     </td>
                     <td className="px-4 py-2 text-right tabular-nums text-zinc-600">
                       {number(item.weight)}
