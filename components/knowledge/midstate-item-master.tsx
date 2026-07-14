@@ -37,7 +37,12 @@ function number(value: number | null) {
 }
 
 function dimensions(item: MidstateItem) {
-  if (item.length === null && item.width === null && item.height === null) {
+  const values = [item.length, item.width, item.height];
+
+  if (
+    values.every((value) => value === null) ||
+    values.every((value) => value === null || value === 0)
+  ) {
     return "N/A";
   }
 
@@ -211,6 +216,7 @@ export function MidstateItemMaster() {
                   <th className="py-2 pr-4">Item Number</th>
                   <th className="px-4 py-2">Description</th>
                   <th className="px-4 py-2">Item Group</th>
+                  <th className="px-4 py-2">UoM</th>
                   <th className="px-4 py-2">Size</th>
                   <th className="px-4 py-2">Dimensions</th>
                   <th className="px-4 py-2 text-right">Weight</th>
@@ -226,11 +232,14 @@ export function MidstateItemMaster() {
                     <td className="py-2 pr-4 font-medium text-zinc-950">
                       {item.itemNumber}
                     </td>
-                    <td className="max-w-[360px] truncate px-4 py-2 text-zinc-700">
+                    <td className="max-w-[520px] whitespace-normal px-4 py-2 leading-5 text-zinc-700">
                       {item.description ?? "N/A"}
                     </td>
                     <td className="px-4 py-2 text-zinc-600">
                       {item.itemGroup ?? "N/A"}
+                    </td>
+                    <td className="px-4 py-2 text-zinc-600">
+                      {item.uom ?? "N/A"}
                     </td>
                     <td className="px-4 py-2 text-zinc-600">
                       {item.size ?? "N/A"}
