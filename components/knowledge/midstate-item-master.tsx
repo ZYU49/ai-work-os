@@ -28,6 +28,8 @@ type MidstateItemsResponse = {
   error?: string;
 };
 
+const pageSize = 100;
+
 function number(value: number | null) {
   if (value === null) {
     return "N/A";
@@ -42,6 +44,7 @@ export function MidstateItemMaster() {
   const [total, setTotal] = useState(0);
   const [query, setQuery] = useState("");
   const [itemGroup, setItemGroup] = useState("");
+  const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,6 +61,11 @@ export function MidstateItemMaster() {
 
     return params.toString();
   }, [itemGroup, query]);
+  const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, items.length);
+  const visibleItems = items.slice(startIndex, endIndex);
 
   const loadItems = useCallback(async () => {
     setIsLoading(true);
@@ -154,14 +162,20 @@ export function MidstateItemMaster() {
             />
             <Input
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setPage(1);
+              }}
               placeholder="Search item or description"
               className="pl-9"
             />
           </div>
           <select
             value={itemGroup}
-            onChange={(event) => setItemGroup(event.target.value)}
+            onChange={(event) => {
+              setItemGroup(event.target.value);
+              setPage(1);
+            }}
             className="h-9 rounded-md border border-zinc-200 bg-white px-3 text-sm text-zinc-950 shadow-sm outline-none transition-colors focus:border-zinc-400 focus:ring-4 focus:ring-zinc-200/70"
             aria-label="Item master group"
           >
@@ -212,7 +226,7 @@ export function MidstateItemMaster() {
                 </tr>
               </thead>
               <tbody>
-                {items.slice(0, 150).map((item) => (
+                {visibleItems.map((item) => (
                   <tr
                     key={item.itemNumber}
                     className="border-b border-zinc-100 last:border-0"
@@ -242,12 +256,33 @@ export function MidstateItemMaster() {
                 ))}
               </tbody>
             </table>
-            {items.length > 150 ? (
-              <p className="mt-3 text-xs text-zinc-500">
-                Showing first 150 matches. Use search or item group filter to narrow
-                the list.
+            <div className="mt-4 flex flex-col gap-3 border-t border-zinc-100 pt-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs text-zinc-500">
+                Showing {number(startIndex + 1)}-{number(endIndex)} of{" "}
+                {number(items.length)}
               </p>
-            ) : null}
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="secondary"
+                  onClick={() => setPage((value) => Math.max(1, value - 1))}
+                  disabled={currentPage === 1}
+                >
+                  Previous
+                </Button>
+                <span className="min-w-20 text-center text-xs font-medium text-zinc-500">
+                  Page {number(currentPage)} / {number(totalPages)}
+                </span>
+                <Button
+                  variant="secondary"
+                  onClick={() =>
+                    setPage((value) => Math.min(totalPages, value + 1))
+                  }
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
           </div>
         )}
       </CardContent>
