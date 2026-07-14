@@ -154,7 +154,9 @@ export function MidstateItemMaster() {
         <div>
           <CardTitle>Midstate Item Master</CardTitle>
           <p className="mt-1 text-sm text-zinc-500">
-            {total ? `${number(total)} items from Item_List (15).xlsx` : "Product lookup"}
+            {total
+              ? `${number(total)} items from Item_List (Cleaned).xlsx`
+              : "Product lookup"}
           </p>
         </div>
         <div className="grid gap-3 lg:grid-cols-[260px_220px_auto]">

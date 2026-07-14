@@ -17,7 +17,7 @@ describe("MidstateItemMaster", () => {
       vi.fn().mockResolvedValue({
         ok: true,
         json: async () => ({
-          total: 831,
+          total: 792,
           itemGroups: ["STD ASSEMBLY"],
           items: [
             {

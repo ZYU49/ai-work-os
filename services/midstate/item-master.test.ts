@@ -31,7 +31,8 @@ describe("Midstate item master", () => {
   test("lists unique product master records for browsing", () => {
     const items = listMidstateItemMaster();
 
-    expect(items.length).toBeGreaterThanOrEqual(800);
+    expect(items).toHaveLength(792);
+    expect(new Set(items.map((item) => item.itemNumber)).size).toBe(792);
     expect(items[0]).toEqual(
       expect.objectContaining({
         itemNumber: expect.any(String),
