@@ -55,19 +55,29 @@ function entryKey(value) {
   return String(value ?? "").trim().toUpperCase();
 }
 
-const workbook = XLSX.readFile(sourcePath, { cellDates: true });
-const sheet = workbook.Sheets[workbook.SheetNames[0]];
-const rows = XLSX.utils.sheet_to_json(sheet, { defval: null, raw: true });
-const itemMap = new Map();
+function rowScore(row) {
+  const uom = entryKey(row.UoM);
+  let score = 0;
 
-for (const row of rows) {
-  const itemNumber = entryKey(row.VIN);
-
-  if (!itemNumber || itemMap.has(itemNumber)) {
-    continue;
+  if (uom === "EA") {
+    score += 100;
+  } else if (uom.includes("CASE")) {
+    score -= 20;
   }
 
-  itemMap.set(itemNumber, {
+  if (text(row.Description)) {
+    score += 10;
+  }
+
+  if (text(row["Item Group"])) {
+    score += 5;
+  }
+
+  return score;
+}
+
+function buildEntry(row) {
+  return {
     description: text(row.Description),
     size: extractSize(row.Description),
     brand: text(row.Brand),
@@ -90,10 +100,32 @@ for (const row of rows) {
     maxLoading: numberValue(row["Max Loading"]),
     psi: numberValue(row.PSI),
     utqg: text(row.UTQG),
-  });
+  };
 }
 
-const entries = [...itemMap.entries()].sort(([a], [b]) => a.localeCompare(b));
+const workbook = XLSX.readFile(sourcePath, { cellDates: true });
+const sheet = workbook.Sheets[workbook.SheetNames[0]];
+const rows = XLSX.utils.sheet_to_json(sheet, { defval: null, raw: true });
+const itemMap = new Map();
+
+for (const row of rows) {
+  const itemNumber = entryKey(row.VIN);
+
+  if (!itemNumber) {
+    continue;
+  }
+
+  const current = itemMap.get(itemNumber);
+  const candidate = { score: rowScore(row), entry: buildEntry(row) };
+
+  if (!current || candidate.score > current.score) {
+    itemMap.set(itemNumber, candidate);
+  }
+}
+
+const entries = [...itemMap.entries()]
+  .map(([itemNumber, value]) => [itemNumber, value.entry])
+  .sort(([a], [b]) => a.localeCompare(b));
 const output = `// Generated from ${basename(sourcePath)}. Do not edit by hand.
 export const MIDSTATE_ITEM_MASTER = ${JSON.stringify(
   Object.fromEntries(entries),

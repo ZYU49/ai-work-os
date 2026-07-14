@@ -19,6 +19,15 @@ describe("Midstate item master", () => {
     });
   });
 
+  test("keeps one record per duplicate item and prefers the EA row", () => {
+    expect(getMidstateItemMetadata("ASB1001")).toMatchObject({
+      description:
+        "ST175/80D13 6PR HI RUN MOUNTED ON 13X4.5 5-4.5 WHITE WHEEL (8 SPOKE)",
+      itemGroup: "STD ASSEMBLY",
+      uom: "EA",
+    });
+  });
+
   test("lists unique product master records for browsing", () => {
     const items = listMidstateItemMaster();
 
