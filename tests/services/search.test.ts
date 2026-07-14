@@ -7,6 +7,7 @@ describe("searchAll", () => {
       project: { findMany: vi.fn() },
       email: { findMany: vi.fn() },
       fileAsset: { findMany: vi.fn() },
+      knowledgePage: { findMany: vi.fn() },
       task: { findMany: vi.fn() },
       note: { findMany: vi.fn() },
       dailyLog: { findMany: vi.fn() },
@@ -17,6 +18,7 @@ describe("searchAll", () => {
       projects: [],
       emails: [],
       files: [],
+      knowledge: [],
       tasks: [],
       notes: [],
       dailyLogs: [],
@@ -52,6 +54,20 @@ describe("searchAll", () => {
         ]),
       },
       fileAsset: { findMany: vi.fn().mockResolvedValue([]) },
+      knowledgePage: {
+        findMany: vi.fn().mockResolvedValue([
+          {
+            id: "knowledge-1",
+            title: "Acme shipping rule",
+            category: "process",
+            content: "Ship Acme stock orders together.",
+            summary: "Shipping process",
+            updatedAt: now,
+            createdAt: now,
+            project: { name: "Acme rollout" },
+          },
+        ]),
+      },
       task: {
         findMany: vi.fn().mockResolvedValue([
           {
@@ -117,6 +133,19 @@ describe("searchAll", () => {
         },
       }),
     );
+    expect(client.knowledgePage.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        take: 8,
+        where: {
+          OR: [
+            { title: { contains: "Acme", mode: "insensitive" } },
+            { content: { contains: "Acme", mode: "insensitive" } },
+            { summary: { contains: "Acme", mode: "insensitive" } },
+            { tags: { has: "Acme" } },
+          ],
+        },
+      }),
+    );
     expect(results.projects[0]).toEqual({
       id: "project-1",
       type: "project",
@@ -131,6 +160,15 @@ describe("searchAll", () => {
       title: "Acme quote",
       subtitle: "buyer@example.com - Acme rollout",
       href: "/mail?emailId=email-1",
+      updatedAt: now,
+      createdAt: now,
+    });
+    expect(results.knowledge[0]).toEqual({
+      id: "knowledge-1",
+      type: "knowledge",
+      title: "Acme shipping rule",
+      subtitle: "process - Acme rollout - Shipping process",
+      href: "/knowledge?knowledgeId=knowledge-1",
       updatedAt: now,
       createdAt: now,
     });

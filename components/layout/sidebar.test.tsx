@@ -31,4 +31,14 @@ describe("Sidebar", () => {
       screen.queryByRole("link", { name: /sales import/i }),
     ).not.toBeInTheDocument();
   });
+
+  test("shows knowledge in navigation and marks it active for knowledge routes", () => {
+    usePathnameMock.mockReturnValue("/knowledge");
+
+    render(<Sidebar />);
+
+    const link = screen.getByRole("link", { name: /knowledge/i });
+    expect(link).toHaveAttribute("href", "/knowledge");
+    expect(link).toHaveAttribute("aria-current", "page");
+  });
 });

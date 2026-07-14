@@ -45,6 +45,16 @@ const pages = [
     ],
   },
   {
+    name: "Knowledge",
+    heading: "Knowledge",
+    loadingText: ["Loading knowledge"],
+    finalStates: (page: Page) => [
+      page.getByRole("heading", { name: "Knowledge is unavailable" }),
+      page.getByRole("heading", { name: "No knowledge pages found" }),
+      page.getByText("New Knowledge Page"),
+    ],
+  },
+  {
     name: "Tasks",
     heading: "Tasks",
     loadingText: ["Loading tasks"],
@@ -111,6 +121,7 @@ test("core MVP pages render from the app shell", async ({ page }) => {
     "**/api/projects**",
     "**/api/mail**",
     "**/api/files**",
+    "**/api/knowledge**",
     "**/api/notes**",
     "**/api/tasks**",
     "**/api/daily-log**",

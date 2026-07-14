@@ -6,6 +6,7 @@ export type SearchResultType =
   | "project"
   | "email"
   | "file"
+  | "knowledge"
   | "task"
   | "note"
   | "dailyLog"
@@ -25,6 +26,7 @@ export type SearchGroups = {
   projects: SearchResult[];
   emails: SearchResult[];
   files: SearchResult[];
+  knowledge: SearchResult[];
   tasks: SearchResult[];
   notes: SearchResult[];
   dailyLogs: SearchResult[];
@@ -36,6 +38,9 @@ type SearchEmail = Prisma.EmailGetPayload<{
   include: { project: { select: { name: true } } };
 }>;
 type SearchFile = Prisma.FileAssetGetPayload<{
+  include: { project: { select: { name: true } } };
+}>;
+type SearchKnowledge = Prisma.KnowledgePageGetPayload<{
   include: { project: { select: { name: true } } };
 }>;
 type SearchTask = Prisma.TaskGetPayload<{
@@ -59,6 +64,9 @@ type SearchClient = {
   fileAsset: {
     findMany(args: Prisma.FileAssetFindManyArgs): Promise<SearchFile[]>;
   };
+  knowledgePage: {
+    findMany(args: Prisma.KnowledgePageFindManyArgs): Promise<SearchKnowledge[]>;
+  };
   task: {
     findMany(args: Prisma.TaskFindManyArgs): Promise<SearchTask[]>;
   };
@@ -77,6 +85,7 @@ const emptyGroups = (): SearchGroups => ({
   projects: [],
   emails: [],
   files: [],
+  knowledge: [],
   tasks: [],
   notes: [],
   dailyLogs: [],
@@ -109,6 +118,7 @@ export async function searchAll(
     projects,
     emails,
     files,
+    knowledgePages,
     tasks,
     notes,
     dailyLogs,
@@ -144,6 +154,19 @@ export async function searchAll(
           { filename: contains(keyword) },
           { summary: contains(keyword) },
           { url: contains(keyword) },
+        ],
+      },
+      orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
+      include: { project: { select: { name: true } } },
+    }),
+    client.knowledgePage.findMany({
+      take: 8,
+      where: {
+        OR: [
+          { title: contains(keyword) },
+          { content: contains(keyword) },
+          { summary: contains(keyword) },
+          { tags: { has: keyword } },
         ],
       },
       orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
@@ -222,6 +245,19 @@ export async function searchAll(
       href: `/files?fileId=${file.id}`,
       updatedAt: file.updatedAt,
       createdAt: file.createdAt,
+    })),
+    knowledge: knowledgePages.map((page) => ({
+      id: page.id,
+      type: "knowledge",
+      title: page.title,
+      subtitle: joinSubtitle([
+        page.category.replaceAll("_", " "),
+        page.project?.name,
+        page.summary ?? firstLine(page.content),
+      ]),
+      href: `/knowledge?knowledgeId=${page.id}`,
+      updatedAt: page.updatedAt,
+      createdAt: page.createdAt,
     })),
     tasks: tasks.map((task) => ({
       id: task.id,

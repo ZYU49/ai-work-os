@@ -32,6 +32,7 @@ type SearchGroups = {
   projects: SearchResult[];
   emails: SearchResult[];
   files: SearchResult[];
+  knowledge: SearchResult[];
   tasks: SearchResult[];
   notes: SearchResult[];
   dailyLogs: SearchResult[];
@@ -42,6 +43,7 @@ const emptyGroups: SearchGroups = {
   projects: [],
   emails: [],
   files: [],
+  knowledge: [],
   tasks: [],
   notes: [],
   dailyLogs: [],
@@ -52,6 +54,7 @@ const sections = [
   { key: "projects", label: "Projects", icon: FolderKanban },
   { key: "emails", label: "Emails", icon: Inbox },
   { key: "files", label: "Files", icon: FileText },
+  { key: "knowledge", label: "Knowledge", icon: BookOpenText },
   { key: "tasks", label: "Tasks", icon: SquareCheckBig },
   { key: "notes", label: "Notes", icon: BookOpenText },
   { key: "dailyLogs", label: "Daily Logs", icon: CalendarDays },
@@ -149,8 +152,8 @@ export default function SearchPage() {
           Search
         </h1>
         <p className="mt-1 max-w-2xl text-sm leading-6 text-zinc-500">
-          Search across projects, mail, files, tasks, notes, daily logs, and
-          contacts.
+          Search across projects, mail, files, knowledge, tasks, notes, daily
+          logs, and contacts.
         </p>
       </div>
 

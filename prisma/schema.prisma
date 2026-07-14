@@ -60,6 +60,14 @@ enum FollowUpStatus {
   done
 }
 
+enum KnowledgeCategory {
+  general
+  customer
+  product
+  process
+  file_reference
+}
+
 enum SalesImportStatus {
   uploaded
   mapped
@@ -109,6 +117,7 @@ model Project {
   emails             Email[]
   files              FileAsset[]
   notes              Note[]
+  knowledgePages     KnowledgePage[]
   tasks              Task[]
   followUps          FollowUp[]
   dailyLogs          DailyLog[]
@@ -303,6 +312,23 @@ model Note {
   author      User?    @relation(fields: [authorId], references: [id], onDelete: SetNull)
 
   @@index([projectId])
+}
+
+model KnowledgePage {
+  id          String            @id @default(cuid())
+  projectId   String?
+  title       String
+  category    KnowledgeCategory @default(general)
+  content     String
+  tags        String[]          @default([])
+  summary     String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  project     Project?          @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@index([projectId])
+  @@index([category])
+  @@index([updatedAt])
 }
 
 model Task {

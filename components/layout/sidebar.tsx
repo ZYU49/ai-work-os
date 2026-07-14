@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   BarChart3,
   Bot,
+  BookOpen,
   CalendarDays,
   CheckSquare,
   FileText,
@@ -23,6 +24,7 @@ const navItems = [
   { label: "Analytics", href: "/analytics", icon: BarChart3 },
   { label: "Mail", href: "/mail", icon: Inbox },
   { label: "Files", href: "/files", icon: FileText },
+  { label: "Knowledge", href: "/knowledge", icon: BookOpen },
   { label: "Notes", href: "/notes", icon: StickyNote },
   { label: "Tasks", href: "/tasks", icon: CheckSquare },
   { label: "Daily Log", href: "/daily-log", icon: CalendarDays },
