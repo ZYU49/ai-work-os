@@ -18,13 +18,46 @@ function text(value) {
   return normalized.length > 0 ? normalized : null;
 }
 
+function numberValue(value) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  const parsed = Number(String(value).replaceAll(",", ""));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function extractSize(description) {
+  const value = text(description);
+
+  if (!value) {
+    return null;
+  }
+
+  const patterns = [
+    /\bST\d{3}\/\d{2}[DR]\d{2}\b/i,
+    /\b\d{1,2}(?:\.\d+)?X\d{1,2}(?:\.\d+)?(?:-\d{1,2}(?:\.\d+)?)?\b/i,
+    /\b\d{1,2}(?:\.\d+)?-\d{1,2}(?:\.\d+)?\b/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = value.match(pattern);
+
+    if (match) {
+      return match[0].toUpperCase();
+    }
+  }
+
+  return null;
+}
+
 function entryKey(value) {
   return String(value ?? "").trim().toUpperCase();
 }
 
 const workbook = XLSX.readFile(sourcePath, { cellDates: true });
 const sheet = workbook.Sheets[workbook.SheetNames[0]];
-const rows = XLSX.utils.sheet_to_json(sheet, { defval: null, raw: false });
+const rows = XLSX.utils.sheet_to_json(sheet, { defval: null, raw: true });
 const itemMap = new Map();
 
 for (const row of rows) {
@@ -36,7 +69,27 @@ for (const row of rows) {
 
   itemMap.set(itemNumber, {
     description: text(row.Description),
+    size: extractSize(row.Description),
+    brand: text(row.Brand),
     itemGroup: text(row["Item Group"]),
+    status: text(row.Status),
+    uom: text(row.UoM),
+    upc: text(row["UPC#"]),
+    length: numberValue(row.Length),
+    width: numberValue(row.Width),
+    height: numberValue(row.Height),
+    weight: numberValue(row.Weight),
+    containerLoadQty: numberValue(row["Container Load Qty"]),
+    truckLoadQty: numberValue(row["TruckLoad Qty"]),
+    tariffCode: text(row["Tariff Code"]),
+    treadDepth: numberValue(row["Tread Depth"]),
+    loadIndex: text(row["Load Index"]),
+    speedRating: text(row["Speed Rating"]),
+    od: numberValue(row.OD),
+    sw: numberValue(row.SW),
+    maxLoading: numberValue(row["Max Loading"]),
+    psi: numberValue(row.PSI),
+    utqg: text(row.UTQG),
   });
 }
 

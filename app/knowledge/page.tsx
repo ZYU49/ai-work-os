@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { KnowledgeEditor } from "@/components/knowledge/knowledge-editor";
 import { KnowledgeList } from "@/components/knowledge/knowledge-list";
+import { MidstateItemMaster } from "@/components/knowledge/midstate-item-master";
 
 export default function KnowledgePage() {
   const [refreshKey, setRefreshKey] = useState(0);
@@ -23,6 +24,8 @@ export default function KnowledgePage() {
         <KnowledgeEditor onSaved={() => setRefreshKey((key) => key + 1)} />
         <KnowledgeList refreshKey={refreshKey} />
       </div>
+
+      <MidstateItemMaster />
     </div>
   );
 }
