@@ -53,6 +53,15 @@ describe("MidstateItemMaster", () => {
       screen.queryByRole("columnheader", { name: "Dimensions" }),
     ).not.toBeInTheDocument();
     expect(
+      screen.queryByRole("columnheader", { name: "FOB Cost" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("columnheader", { name: "Cost Source" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("columnheader", { name: "Weight" }),
+    ).not.toBeInTheDocument();
+    expect(
       within(row).getByText(
         "ST175/80D13 6PR HI RUN SCap & 13X4.5 5-4.5 WHITE WHEEL (8 SPOKE)",
       ).closest("td"),
@@ -150,8 +159,9 @@ describe("MidstateItemMaster", () => {
 
     render(<MidstateItemMaster />);
 
-    expect(await screen.findByText("$6.39")).toBeInTheDocument();
-    expect(screen.getByText("L&G (2025-05-15)")).toBeInTheDocument();
+    expect(await screen.findByText("WD1030")).toBeInTheDocument();
+    expect(screen.queryByText("$6.39")).not.toBeInTheDocument();
+    expect(screen.queryByText("L&G (2025-05-15)")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByLabelText("Midstates FOB"));
 

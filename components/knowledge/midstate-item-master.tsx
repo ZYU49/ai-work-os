@@ -247,9 +247,6 @@ export function MidstateItemMaster() {
                   <th className="px-4 py-2">Item Group</th>
                   <th className="px-4 py-2">UoM</th>
                   <th className="px-4 py-2">Size</th>
-                  <th className="px-4 py-2 text-right">FOB Cost</th>
-                  <th className="px-4 py-2">Cost Source</th>
-                  <th className="px-4 py-2 text-right">Weight</th>
                   <th className="py-2 pl-4">Status</th>
                 </tr>
               </thead>
@@ -273,20 +270,6 @@ export function MidstateItemMaster() {
                     </td>
                     <td className="px-4 py-2 text-zinc-600">
                       {item.size ?? "N/A"}
-                    </td>
-                    <td className="px-4 py-2 text-right tabular-nums text-zinc-600">
-                      {item.fobCost?.effectiveFob === null ||
-                      item.fobCost?.effectiveFob === undefined
-                        ? "N/A"
-                        : `$${number(item.fobCost.effectiveFob)}`}
-                    </td>
-                    <td className="px-4 py-2 text-zinc-600">
-                      {item.fobCost
-                        ? `${item.fobCost.sourceSheet} (${item.fobCost.effectiveDate})`
-                        : "N/A"}
-                    </td>
-                    <td className="px-4 py-2 text-right tabular-nums text-zinc-600">
-                      {number(item.weight)}
                     </td>
                     <td className="py-2 pl-4 text-zinc-600">
                       {item.status ?? "N/A"}
