@@ -42,6 +42,7 @@ describe("MidstateItemMaster", () => {
 
     render(<MidstateItemMaster />);
 
+    expect(await screen.findByText("Midstates FOB")).toBeInTheDocument();
     const row = await screen.findByRole("row", {
       name: /ASB1001S ST175\/80D13 6PR HI RUN SCap/,
     });

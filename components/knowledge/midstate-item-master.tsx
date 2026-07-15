@@ -93,7 +93,7 @@ export function MidstateItemMaster() {
       const data = (await response.json().catch(() => ({}))) as MidstateItemsResponse;
 
       if (!response.ok) {
-        throw new Error(data.error ?? "Unable to load Midstate item master.");
+        throw new Error(data.error ?? "Unable to load Midstates FOB.");
       }
 
       setItems(data.items ?? []);
@@ -104,7 +104,7 @@ export function MidstateItemMaster() {
       setError(
         loadError instanceof Error
           ? loadError.message
-          : "Unable to load Midstate item master.",
+          : "Unable to load Midstates FOB.",
       );
     } finally {
       setIsLoading(false);
@@ -126,7 +126,7 @@ export function MidstateItemMaster() {
         const data = (await response.json().catch(() => ({}))) as MidstateItemsResponse;
 
         if (!response.ok) {
-          throw new Error(data.error ?? "Unable to load Midstate item master.");
+          throw new Error(data.error ?? "Unable to load Midstates FOB.");
         }
 
         if (isMounted) {
@@ -140,7 +140,7 @@ export function MidstateItemMaster() {
           setError(
             loadError instanceof Error
               ? loadError.message
-              : "Unable to load Midstate item master.",
+              : "Unable to load Midstates FOB.",
           );
         }
       } finally {
@@ -161,7 +161,7 @@ export function MidstateItemMaster() {
     <Card>
       <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <CardTitle>Midstate Item Master</CardTitle>
+          <CardTitle>Midstates FOB</CardTitle>
           <p className="mt-1 text-sm text-zinc-500">
             {total
               ? `${number(total)} items from Item_List (Cleaned).xlsx`
@@ -222,11 +222,11 @@ export function MidstateItemMaster() {
         {isLoading ? (
           <div className="flex h-44 items-center justify-center gap-2 text-sm text-zinc-500">
             <RefreshCw className="size-4 animate-spin" aria-hidden="true" />
-            Loading item master
+            Loading Midstates FOB
           </div>
         ) : error ? (
           <EmptyState
-            title="Item master is unavailable"
+            title="Midstates FOB is unavailable"
             description={error}
             icon={<AlertCircle className="size-6" aria-hidden="true" />}
             action={{ label: "Retry", onClick: loadItems }}
