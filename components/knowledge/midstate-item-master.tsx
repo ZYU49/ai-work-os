@@ -214,7 +214,7 @@ export function MidstateItemMaster() {
               }}
               className="size-4 rounded border-zinc-300"
             />
-            Has FOB cost
+            Midstates FOB
           </label>
         </div>
       </CardHeader>

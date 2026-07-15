@@ -42,7 +42,8 @@ describe("MidstateItemMaster", () => {
 
     render(<MidstateItemMaster />);
 
-    expect(await screen.findByText("Midstates FOB")).toBeInTheDocument();
+    await screen.findByText("ASB1001S");
+    expect(screen.getAllByText("Midstates FOB")).toHaveLength(2);
     const row = await screen.findByRole("row", {
       name: /ASB1001S ST175\/80D13 6PR HI RUN SCap/,
     });
@@ -152,7 +153,7 @@ describe("MidstateItemMaster", () => {
     expect(await screen.findByText("$6.39")).toBeInTheDocument();
     expect(screen.getByText("L&G (2025-05-15)")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByLabelText("Has FOB cost"));
+    fireEvent.click(screen.getByLabelText("Midstates FOB"));
 
     expect(fetchMock).toHaveBeenLastCalledWith(
       "/api/knowledge/midstate-items?hasFobCost=true",
