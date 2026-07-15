@@ -16,6 +16,10 @@ describe("Midstate item master", () => {
       width: 13,
       height: 5,
       weight: 5.4,
+      fobCost: expect.objectContaining({
+        effectiveFob: 6.39,
+        effectiveDate: "2025-05-15",
+      }),
     });
   });
 

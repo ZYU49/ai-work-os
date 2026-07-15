@@ -33,6 +33,7 @@ describe("MidstateItemMaster", () => {
               width: 0,
               height: 0,
               weight: 26.5,
+              fobCost: null,
             },
           ],
         }),
@@ -79,6 +80,18 @@ describe("MidstateItemMaster", () => {
               width: 0,
               height: 0,
               weight: index + 1,
+              fobCost:
+                index === 0
+                  ? {
+                      sourceSheet: "L&G",
+                      currentFob: 6.66,
+                      increase: -0.04,
+                      effectiveFob: 6.39,
+                      effectiveDate: "2025-05-15",
+                      containerQty40: 4400,
+                      containerQty20: null,
+                    }
+                  : null,
             };
           }),
         }),
@@ -97,5 +110,52 @@ describe("MidstateItemMaster", () => {
     expect(screen.queryByText("SKU001")).not.toBeInTheDocument();
     expect(screen.getByText("SKU101")).toBeInTheDocument();
     expect(screen.getByText("Showing 101-101 of 101")).toBeInTheDocument();
+  });
+
+  test("shows FOB cost and can request only items with FOB cost", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        total: 1,
+        itemGroups: ["L&G Tires"],
+        items: [
+          {
+            itemNumber: "WD1030",
+            description: "15X6.00-6 2PR SU05 HI-RUN",
+            size: "15X6.00-6",
+            brand: "HI-RUN",
+            itemGroup: "L&G Tires",
+            status: "Active",
+            uom: "EA",
+            length: 13,
+            width: 13,
+            height: 5,
+            weight: 5.4,
+            fobCost: {
+              sourceSheet: "L&G",
+              currentFob: 6.66,
+              increase: -0.04,
+              effectiveFob: 6.39,
+              effectiveDate: "2025-05-15",
+              containerQty40: 4400,
+              containerQty20: null,
+            },
+          },
+        ],
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<MidstateItemMaster />);
+
+    expect(await screen.findByText("$6.39")).toBeInTheDocument();
+    expect(screen.getByText("L&G (2025-05-15)")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText("Has FOB cost"));
+
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      "/api/knowledge/midstate-items?hasFobCost=true",
+      { cache: "no-store" },
+    );
   });
 });

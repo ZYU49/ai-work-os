@@ -19,6 +19,15 @@ type MidstateItem = {
   width: number | null;
   height: number | null;
   weight: number | null;
+  fobCost: {
+    sourceSheet: string;
+    currentFob: number | null;
+    increase: number | null;
+    effectiveFob: number | null;
+    effectiveDate: string;
+    containerQty40: number | null;
+    containerQty20: number | null;
+  } | null;
 };
 
 type MidstateItemsResponse = {
@@ -44,6 +53,7 @@ export function MidstateItemMaster() {
   const [total, setTotal] = useState(0);
   const [query, setQuery] = useState("");
   const [itemGroup, setItemGroup] = useState("");
+  const [hasFobCost, setHasFobCost] = useState(false);
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -59,8 +69,12 @@ export function MidstateItemMaster() {
       params.set("itemGroup", itemGroup);
     }
 
+    if (hasFobCost) {
+      params.set("hasFobCost", "true");
+    }
+
     return params.toString();
-  }, [itemGroup, query]);
+  }, [hasFobCost, itemGroup, query]);
   const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
   const currentPage = Math.min(page, totalPages);
   const startIndex = (currentPage - 1) * pageSize;
@@ -154,7 +168,7 @@ export function MidstateItemMaster() {
               : "Product lookup"}
           </p>
         </div>
-        <div className="grid gap-3 lg:grid-cols-[260px_220px_auto]">
+        <div className="grid gap-3 lg:grid-cols-[260px_220px_auto_auto]">
           <div className="relative">
             <Search
               className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-400"
@@ -190,6 +204,18 @@ export function MidstateItemMaster() {
             <RefreshCw className="size-4" aria-hidden="true" />
             Refresh
           </Button>
+          <label className="inline-flex h-9 items-center gap-2 rounded-md border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-700 shadow-sm">
+            <input
+              type="checkbox"
+              checked={hasFobCost}
+              onChange={(event) => {
+                setHasFobCost(event.target.checked);
+                setPage(1);
+              }}
+              className="size-4 rounded border-zinc-300"
+            />
+            Has FOB cost
+          </label>
         </div>
       </CardHeader>
       <CardContent>
@@ -221,6 +247,8 @@ export function MidstateItemMaster() {
                   <th className="px-4 py-2">Item Group</th>
                   <th className="px-4 py-2">UoM</th>
                   <th className="px-4 py-2">Size</th>
+                  <th className="px-4 py-2 text-right">FOB Cost</th>
+                  <th className="px-4 py-2">Cost Source</th>
                   <th className="px-4 py-2 text-right">Weight</th>
                   <th className="py-2 pl-4">Status</th>
                 </tr>
@@ -245,6 +273,17 @@ export function MidstateItemMaster() {
                     </td>
                     <td className="px-4 py-2 text-zinc-600">
                       {item.size ?? "N/A"}
+                    </td>
+                    <td className="px-4 py-2 text-right tabular-nums text-zinc-600">
+                      {item.fobCost?.effectiveFob === null ||
+                      item.fobCost?.effectiveFob === undefined
+                        ? "N/A"
+                        : `$${number(item.fobCost.effectiveFob)}`}
+                    </td>
+                    <td className="px-4 py-2 text-zinc-600">
+                      {item.fobCost
+                        ? `${item.fobCost.sourceSheet} (${item.fobCost.effectiveDate})`
+                        : "N/A"}
                     </td>
                     <td className="px-4 py-2 text-right tabular-nums text-zinc-600">
                       {number(item.weight)}

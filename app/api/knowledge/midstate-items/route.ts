@@ -10,10 +10,15 @@ export function GET(request: Request) {
   const searchParams = new URL(request.url).searchParams;
   const query = (searchParams.get("q") ?? "").trim().toLowerCase();
   const itemGroup = (searchParams.get("itemGroup") ?? "").trim();
+  const hasFobCost = searchParams.get("hasFobCost") === "true";
   const allItems = listMidstateItemMaster();
 
   const filteredItems = allItems.filter((item) => {
     if (itemGroup && item.itemGroup !== itemGroup) {
+      return false;
+    }
+
+    if (hasFobCost && !item.fobCost) {
       return false;
     }
 

@@ -1,4 +1,8 @@
 import { MIDSTATE_ITEM_MASTER } from "@/services/midstate/item-master.generated";
+import {
+  getMidstateFobCost,
+  type MidstateFobCost,
+} from "@/services/midstate/fob-cost";
 
 export type MidstateItemMetadata = {
   description: string | null;
@@ -24,6 +28,7 @@ export type MidstateItemMetadata = {
   maxLoading: number | null;
   psi: number | null;
   utqg: string | null;
+  fobCost: MidstateFobCost | null;
 };
 
 export type MidstateItemMasterRecord = MidstateItemMetadata & {
@@ -66,6 +71,7 @@ export function getMidstateItemMetadata(
     maxLoading: entry.maxLoading,
     psi: entry.psi,
     utqg: entry.utqg,
+    fobCost: getMidstateFobCost(key),
   };
 }
 
