@@ -65,6 +65,41 @@ function createAnalyticsResponse({
     { month: `${currentYear}-04`, quantity: 0 },
     { month: `${currentYear}-05`, quantity: 14757 },
   ];
+  const memberItemBreakdown = selectedMember
+    ? {
+        memberNumber: selectedMember.memberNumber,
+        memberName: selectedMember.memberName,
+        startMonth: `${priorYear}-06`,
+        endMonth: `${currentYear}-05`,
+        totalQuantity: 275,
+        categories: [
+          {
+            category: "L&G Tires",
+            itemCount: 1,
+            quantity: 200,
+            items: [
+              {
+                itemNumber: "WD1030",
+                description: "15X6.00-6 2PR SU05 HI-RUN",
+                quantity: 200,
+              },
+            ],
+          },
+          {
+            category: "STR ASSEMBLY",
+            itemCount: 1,
+            quantity: 75,
+            items: [
+              {
+                itemNumber: "ASR1200",
+                description: "ST175/80R13 6PR WR078(ST100) HI-RUN",
+                quantity: 75,
+              },
+            ],
+          },
+        ],
+      }
+    : null;
 
   return {
     analytics: {
@@ -86,6 +121,7 @@ function createAnalyticsResponse({
         topMember: point.quantity > 0 ? "Bomgaars Supply, Inc." : null,
         topSku: point.quantity > 0 ? "WD1030" : null,
       })),
+      memberItemBreakdown,
       itemRankings: [
         {
           rank: 1,
@@ -253,6 +289,48 @@ describe("MidstateDashboard", () => {
         ),
       ).toBe(true),
     );
+  });
+
+  test("opens a selected member item breakdown modal", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () =>
+          createAnalyticsResponse({
+            selectedMember: {
+              memberNumber: "82801",
+              memberName: "Bomgaars Supply, Inc.",
+            },
+          }),
+      }),
+    );
+
+    render(<MidstateDashboard />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "View Items" }));
+
+    const dialog = screen.getByRole("dialog", {
+      name: "Bomgaars Supply, Inc. Item Breakdown",
+    });
+    expect(dialog).toBeVisible();
+    expect(within(dialog).getByText(/Rolling 12 months:/)).toHaveTextContent(
+      `Rolling 12 months: ${priorYear}-06 to ${currentYear}-05 · Total Units: 275`,
+    );
+    expect(within(dialog).getByText("L&G Tires")).toBeVisible();
+    expect(within(dialog).getAllByText(/1 items/)[0]).toHaveTextContent(
+      "1 items · Total Units: 200",
+    );
+    expect(within(dialog).getByText("WD1030")).toBeVisible();
+    expect(
+      within(dialog).getByText("15X6.00-6 2PR SU05 HI-RUN"),
+    ).toBeVisible();
+
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Close item breakdown" }),
+    );
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   test("keeps long Top Member and Top SKU values inside their KPI cards", async () => {

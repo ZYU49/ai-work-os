@@ -1,5 +1,6 @@
 "use client";
 
+import { X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   MidstateFilters,
@@ -82,23 +83,133 @@ function RollingChartCard({
   mode,
   onModeChange,
   emptyState,
+  action,
 }: {
   title: string;
   data: Array<{ month: string; quantity: number }>;
   mode: QuantityChartMode;
   onModeChange: (mode: QuantityChartMode) => void;
   emptyState: string;
+  action?: React.ReactNode;
 }) {
   return (
     <Card>
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <CardTitle>{title}</CardTitle>
-        <ModeToggle value={mode} onChange={onModeChange} />
+        <div className="flex flex-wrap items-center gap-2">
+          {action}
+          <ModeToggle value={mode} onChange={onModeChange} />
+        </div>
       </CardHeader>
       <CardContent>
         <QuantityRollingChart data={data} mode={mode} emptyState={emptyState} />
       </CardContent>
     </Card>
+  );
+}
+
+function MemberItemBreakdownModal({
+  breakdown,
+  onClose,
+}: {
+  breakdown: NonNullable<MidstateAnalyticsOverview["memberItemBreakdown"]>;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/35 p-4"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <section
+        aria-labelledby="member-item-breakdown-title"
+        aria-modal="true"
+        role="dialog"
+        className="flex max-h-[86vh] w-full max-w-6xl flex-col overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-2xl"
+      >
+        <div className="flex flex-col gap-3 border-b border-zinc-200 p-5 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <h2
+              id="member-item-breakdown-title"
+              className="text-lg font-semibold text-zinc-950"
+            >
+              {breakdown.memberName} Item Breakdown
+            </h2>
+            <p className="mt-1 text-sm text-zinc-500">
+              Rolling 12 months: {breakdown.startMonth} to {breakdown.endMonth} ·
+              Total Units: {number(breakdown.totalQuantity)}
+            </p>
+          </div>
+          <Button
+            aria-label="Close item breakdown"
+            className="h-9 w-9 px-0"
+            variant="ghost"
+            onClick={onClose}
+          >
+            <X className="h-4 w-4" aria-hidden="true" />
+          </Button>
+        </div>
+        <div className="overflow-y-auto p-5">
+          {breakdown.categories.length === 0 ? (
+            <p className="py-10 text-center text-sm text-zinc-500">
+              No item sales for this member in the rolling 12-month period.
+            </p>
+          ) : (
+            <div className="space-y-6">
+              {breakdown.categories.map((category) => (
+                <div
+                  key={category.category ?? "uncategorized"}
+                  className="overflow-hidden rounded-md border border-zinc-200"
+                >
+                  <div className="flex flex-col gap-1 bg-zinc-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                    <h3 className="text-sm font-semibold text-zinc-950">
+                      {categoryLabel(category.category)}
+                    </h3>
+                    <p className="text-sm text-zinc-500">
+                      {number(category.itemCount)} items · Total Units:{" "}
+                      {number(category.quantity)}
+                    </p>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[720px] text-sm">
+                      <thead>
+                        <tr className="border-b border-zinc-200 text-left text-xs font-medium uppercase tracking-normal text-zinc-500">
+                          <th className="px-4 py-2">Item</th>
+                          <th className="px-4 py-2">Description</th>
+                          <th className="px-4 py-2 text-right">Qty</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {category.items.map((item) => (
+                          <tr
+                            key={item.itemNumber}
+                            className="border-b border-zinc-100 last:border-0"
+                          >
+                            <td className="whitespace-nowrap px-4 py-2 font-medium text-zinc-950">
+                              {item.itemNumber}
+                            </td>
+                            <td className="px-4 py-2 text-zinc-600">
+                              {item.description ?? "N/A"}
+                            </td>
+                            <td className="px-4 py-2 text-right tabular-nums text-zinc-700">
+                              {number(item.quantity)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+    </div>
   );
 }
 
@@ -239,6 +350,7 @@ export function MidstateDashboard() {
   const [overallChartMode, setOverallChartMode] =
     useState<QuantityChartMode>("line");
   const [itemCategory, setItemCategory] = useState("");
+  const [isMemberItemsOpen, setIsMemberItemsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -337,12 +449,14 @@ export function MidstateDashboard() {
 
   function handleFiltersChange(nextFilters: MidstateDashboardFilters) {
     setIsLoading(true);
+    setIsMemberItemsOpen(false);
     setFilters(nextFilters);
   }
 
   const latestOverall = analytics ? latest(analytics.overallRollingMonths) : null;
   const latestMember = analytics ? latest(analytics.rollingMonths) : null;
   const memberData = analytics?.selectedMember ? analytics.rollingMonths : [];
+  const memberItemBreakdown = analytics?.memberItemBreakdown ?? null;
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
@@ -404,6 +518,16 @@ export function MidstateDashboard() {
             mode={memberChartMode}
             onModeChange={setMemberChartMode}
             emptyState="Select a member to view its rolling 12-month trend."
+            action={
+              memberItemBreakdown ? (
+                <Button
+                  variant="secondary"
+                  onClick={() => setIsMemberItemsOpen(true)}
+                >
+                  View Items
+                </Button>
+              ) : null
+            }
           />
 
           <RollingChartCard
@@ -455,6 +579,13 @@ export function MidstateDashboard() {
               Refresh
             </Button>
           </div>
+
+          {isMemberItemsOpen && memberItemBreakdown ? (
+            <MemberItemBreakdownModal
+              breakdown={memberItemBreakdown}
+              onClose={() => setIsMemberItemsOpen(false)}
+            />
+          ) : null}
         </>
       ) : null}
     </div>

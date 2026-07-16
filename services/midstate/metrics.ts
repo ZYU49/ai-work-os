@@ -75,6 +75,23 @@ export type MidstateAnalyticsOverview = {
     category: string | null;
     quantity: number;
   }>;
+  memberItemBreakdown: {
+    memberNumber: string;
+    memberName: string;
+    startMonth: string;
+    endMonth: string;
+    totalQuantity: number;
+    categories: Array<{
+      category: string | null;
+      itemCount: number;
+      quantity: number;
+      items: Array<{
+        itemNumber: string;
+        description: string | null;
+        quantity: number;
+      }>;
+    }>;
+  } | null;
   monthly: Array<{
     month: string;
     quantity: number;
@@ -177,6 +194,11 @@ type ItemRankingTotals = {
   description: string | null;
   category: string | null;
   quantity: number;
+};
+
+type SelectedMemberSummary = {
+  memberNumber: string;
+  memberName: string;
 };
 
 export function calculateGrowth(
@@ -395,6 +417,99 @@ function rollingItemRankings(rows: MidstateMetricRow[], keys: string[]) {
     }));
 }
 
+function rollingMemberItemBreakdown(
+  rows: MidstateMetricRow[],
+  keys: string[],
+  selectedMember: SelectedMemberSummary | null,
+): MidstateAnalyticsOverview["memberItemBreakdown"] {
+  if (!selectedMember) {
+    return null;
+  }
+
+  const keySet = new Set(keys);
+  const itemTotals = new Map<string, ItemRankingTotals>();
+
+  for (const row of rows) {
+    if (
+      row.memberNumber !== selectedMember.memberNumber ||
+      !keySet.has(monthKey(row.postDate))
+    ) {
+      continue;
+    }
+
+    const itemMetadata = getMidstateItemMetadata(row.sku);
+    const current = itemTotals.get(row.sku) ?? {
+      itemNumber: row.sku,
+      description: itemMetadata?.description ?? row.description,
+      category: itemMetadata?.category ?? inferredItemCategory(row),
+      quantity: 0,
+    };
+
+    current.quantity += row.quantity;
+    current.description =
+      current.description ?? itemMetadata?.description ?? row.description;
+    current.category =
+      current.category ?? itemMetadata?.category ?? inferredItemCategory(row);
+    itemTotals.set(row.sku, current);
+  }
+
+  const categoryTotals = new Map<
+    string,
+    {
+      category: string | null;
+      quantity: number;
+      items: Array<{
+        itemNumber: string;
+        description: string | null;
+        quantity: number;
+      }>;
+    }
+  >();
+
+  for (const item of itemTotals.values()) {
+    const key = item.category ?? "";
+    const category = categoryTotals.get(key) ?? {
+      category: item.category,
+      quantity: 0,
+      items: [],
+    };
+
+    category.quantity += item.quantity;
+    category.items.push({
+      itemNumber: item.itemNumber,
+      description: item.description,
+      quantity: item.quantity,
+    });
+    categoryTotals.set(key, category);
+  }
+
+  const categories = [...categoryTotals.values()]
+    .map((category) => ({
+      ...category,
+      itemCount: category.items.length,
+      items: category.items.sort(
+        (a, b) =>
+          b.quantity - a.quantity || a.itemNumber.localeCompare(b.itemNumber),
+      ),
+    }))
+    .sort(
+      (a, b) =>
+        b.quantity - a.quantity ||
+        (a.category ?? "Uncategorized").localeCompare(
+          b.category ?? "Uncategorized",
+        ),
+    );
+
+  return {
+    memberNumber: selectedMember.memberNumber,
+    memberName: selectedMember.memberName,
+    startMonth: keys[0],
+    endMonth: keys.at(-1) ?? keys[0],
+    totalQuantity: categories.reduce((sum, category) => sum + category.quantity, 0),
+    categories,
+  };
+}
+
 export function summarizeMidstateRowsForTest(
   rows: MidstateMetricRow[],
   filters: MidstateAnalyticsFilters,
@@ -597,6 +712,12 @@ export function summarizeMidstateRowsForTest(
         (row) => row.memberNumber === parsedFilters.memberNumber,
       ) ?? null)
     : null;
+  const selectedMemberSummary = selectedMember
+    ? {
+        memberNumber: selectedMember.memberNumber,
+        memberName: selectedMember.memberName,
+      }
+    : null;
 
   return {
     kpis: {
@@ -609,15 +730,15 @@ export function summarizeMidstateRowsForTest(
       topMember: topMembers[0]?.name ?? null,
       topSku: topSkus[0]?.name ?? null,
     },
-    selectedMember: selectedMember
-      ? {
-          memberNumber: selectedMember.memberNumber,
-          memberName: selectedMember.memberName,
-        }
-      : null,
+    selectedMember: selectedMemberSummary,
     rollingMonths: quantityRollingMonths(rollingRows, rollingKeys),
     overallRollingMonths: overallRollingMonths(overallRows, rollingKeys),
     itemRankings: rollingItemRankings(overallRows, rollingKeys),
+    memberItemBreakdown: rollingMemberItemBreakdown(
+      rows,
+      rollingKeys,
+      selectedMemberSummary,
+    ),
     monthly,
     yoyComparison,
     orderClassMonthly,

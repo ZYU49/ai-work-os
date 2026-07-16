@@ -258,4 +258,72 @@ describe("midstate metrics", () => {
       quantity: 12,
     });
   });
+
+  test("builds selected member rolling 12-month item breakdown by item group", () => {
+    const breakdownRows = [
+      { postDate: new Date(2025, 4, 1), memberNumber: "82801", memberName: "Bomgaars", sku: "OLD100", description: "Outside rolling", orderClass: "Warehouse", category: "Old Group", quantity: 999, costExt: 9990 },
+      { postDate: new Date(2025, 5, 1), memberNumber: "82801", memberName: "Bomgaars", sku: "ASR1200", description: "Radial source", orderClass: "Warehouse", category: null, quantity: 10, costExt: 100 },
+      { postDate: new Date(2026, 3, 1), memberNumber: "758801", memberName: "Running Supply", sku: "WD1030", description: "Other member", orderClass: "Warehouse", category: null, quantity: 500, costExt: 5000 },
+      { postDate: new Date(2026, 4, 1), memberNumber: "82801", memberName: "Bomgaars", sku: "WD1030", description: "15X6-6 SU05 LG", orderClass: "Warehouse", category: null, quantity: 200, costExt: 2000 },
+      { postDate: new Date(2026, 4, 2), memberNumber: "82801", memberName: "Bomgaars", sku: "ASR1200", description: "Radial source", orderClass: "Warehouse", category: null, quantity: 40, costExt: 400 },
+      { postDate: new Date(2026, 4, 3), memberNumber: "82801", memberName: "Bomgaars", sku: "ASB1001", description: "Bias source", orderClass: "Warehouse", category: null, quantity: 25, costExt: 250 },
+    ];
+
+    const analytics = summarizeMidstateRowsForTest(
+      breakdownRows,
+      {
+        year: 2026,
+        memberNumber: "82801",
+      },
+      breakdownRows,
+    );
+
+    expect(analytics.memberItemBreakdown).toEqual({
+      memberNumber: "82801",
+      memberName: "Bomgaars",
+      startMonth: "2025-06",
+      endMonth: "2026-05",
+      totalQuantity: 275,
+      categories: [
+        {
+          category: "L&G Tires",
+          itemCount: 1,
+          quantity: 200,
+          items: [
+            {
+              itemNumber: "WD1030",
+              description: "15X6.00-6 2PR SU05 HI-RUN",
+              quantity: 200,
+            },
+          ],
+        },
+        {
+          category: "STR ASSEMBLY",
+          itemCount: 1,
+          quantity: 50,
+          items: [
+            {
+              itemNumber: "ASR1200",
+              description:
+                "ST175/80R13 6PR WR078(ST100) HI-RUN on 13X4.5 5-4.5 WHITE WHEEL (8SP)",
+              quantity: 50,
+            },
+          ],
+        },
+        {
+          category: "STD ASSEMBLY",
+          itemCount: 1,
+          quantity: 25,
+          items: [
+            {
+              itemNumber: "ASB1001",
+              description:
+                "ST175/80D13 6PR HI RUN MOUNTED ON 13X4.5 5-4.5 WHITE WHEEL (8 SPOKE)",
+              quantity: 25,
+            },
+          ],
+        },
+      ],
+    });
+  });
 });
