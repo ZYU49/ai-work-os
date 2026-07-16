@@ -291,6 +291,44 @@ describe("MidstateDashboard", () => {
     );
   });
 
+  test("groups overall summary before selected member details", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () =>
+          createAnalyticsResponse({
+            selectedMember: {
+              memberNumber: "82801",
+              memberName: "Bomgaars Supply, Inc.",
+            },
+          }),
+      }),
+    );
+
+    render(<MidstateDashboard />);
+
+    const executiveSummary = await screen.findByText("Executive Summary");
+    const overallChart = screen.getByText("Midstate Overall Rolling 12 Months");
+    const selectedSnapshot = screen.getByText("Selected Member Snapshot");
+    const memberChart = screen.getByText(
+      "Bomgaars Supply, Inc. Rolling 12 Months",
+    );
+
+    expect(
+      executiveSummary.compareDocumentPosition(overallChart) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      overallChart.compareDocumentPosition(selectedSnapshot) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      selectedSnapshot.compareDocumentPosition(memberChart) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   test("opens a selected member item breakdown modal", async () => {
     vi.stubGlobal(
       "fetch",
@@ -315,11 +353,11 @@ describe("MidstateDashboard", () => {
     });
     expect(dialog).toBeVisible();
     expect(within(dialog).getByText(/Rolling 12 months:/)).toHaveTextContent(
-      `Rolling 12 months: ${priorYear}-06 to ${currentYear}-05 · Total Units: 275`,
+      `Rolling 12 months: ${priorYear}-06 to ${currentYear}-05 - Total Units: 275`,
     );
     expect(within(dialog).getByText("L&G Tires")).toBeVisible();
     expect(within(dialog).getAllByText(/1 items/)[0]).toHaveTextContent(
-      "1 items · Total Units: 200",
+      "1 items - Total Units: 200",
     );
     expect(within(dialog).getByText("WD1030")).toBeVisible();
     expect(

@@ -140,7 +140,7 @@ function MemberItemBreakdownModal({
               {breakdown.memberName} Item Breakdown
             </h2>
             <p className="mt-1 text-sm text-zinc-500">
-              Rolling 12 months: {breakdown.startMonth} to {breakdown.endMonth} ·
+              Rolling 12 months: {breakdown.startMonth} to {breakdown.endMonth} -
               Total Units: {number(breakdown.totalQuantity)}
             </p>
           </div>
@@ -170,7 +170,7 @@ function MemberItemBreakdownModal({
                       {categoryLabel(category.category)}
                     </h3>
                     <p className="text-sm text-zinc-500">
-                      {number(category.itemCount)} items · Total Units:{" "}
+                      {number(category.itemCount)} items - Total Units:{" "}
                       {number(category.quantity)}
                     </p>
                   </div>
@@ -481,86 +481,102 @@ export function MidstateDashboard() {
 
       {analytics ? (
         <>
-          <Card>
-            <CardHeader>
-              <CardTitle>Executive Summary</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm leading-6 text-zinc-600">
-                {summarySentence(analytics)}
-              </p>
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-                <SummaryMetric
-                  label="Rolling 12 Qty"
-                  value={number(totalQuantity(analytics.overallRollingMonths))}
-                />
-                <SummaryMetric
-                  label="Latest Month Qty"
-                  value={number(latestOverall?.quantity ?? 0)}
-                  detail={latestOverall?.month}
-                />
-                <SummaryMetric
-                  label="Members"
-                  value={number(analytics.kpis.activeMembers)}
-                />
-                <SummaryMetric
-                  label="Top Member"
-                  value={analytics.kpis.topMember ?? "N/A"}
-                />
-                <SummaryMetric label="Top SKU" value={analytics.kpis.topSku ?? "N/A"} />
-              </div>
-            </CardContent>
-          </Card>
-
-          <RollingChartCard
-            title={chartTitle(analytics)}
-            data={memberData}
-            mode={memberChartMode}
-            onModeChange={setMemberChartMode}
-            emptyState="Select a member to view its rolling 12-month trend."
-            action={
-              memberItemBreakdown ? (
-                <Button
-                  variant="secondary"
-                  onClick={() => setIsMemberItemsOpen(true)}
-                >
-                  View Items
-                </Button>
-              ) : null
-            }
-          />
-
-          <RollingChartCard
-            title="Midstate Overall Rolling 12 Months"
-            data={analytics.overallRollingMonths}
-            mode={overallChartMode}
-            onModeChange={setOverallChartMode}
-            emptyState="No Midstate rolling data yet."
-          />
-
-          {analytics.selectedMember ? (
+          <section className="space-y-4" aria-labelledby="midstate-overall-title">
+            <h2
+              id="midstate-overall-title"
+              className="text-sm font-semibold uppercase tracking-normal text-zinc-500"
+            >
+              Midstate Overall
+            </h2>
             <Card>
               <CardHeader>
-                <CardTitle>Selected Member Snapshot</CardTitle>
+                <CardTitle>Executive Summary</CardTitle>
               </CardHeader>
-              <CardContent className="grid gap-3 sm:grid-cols-3">
-                <SummaryMetric
-                  label="Member"
-                  value={analytics.selectedMember.memberName}
-                  detail={analytics.selectedMember.memberNumber}
-                />
-                <SummaryMetric
-                  label="Rolling 12 Qty"
-                  value={number(totalQuantity(analytics.rollingMonths))}
-                />
-                <SummaryMetric
-                  label="Latest Month Qty"
-                  value={number(latestMember?.quantity ?? 0)}
-                  detail={latestMember?.month}
-                />
+              <CardContent className="space-y-4">
+                <p className="text-sm leading-6 text-zinc-600">
+                  {summarySentence(analytics)}
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                  <SummaryMetric
+                    label="Rolling 12 Qty"
+                    value={number(totalQuantity(analytics.overallRollingMonths))}
+                  />
+                  <SummaryMetric
+                    label="Latest Month Qty"
+                    value={number(latestOverall?.quantity ?? 0)}
+                    detail={latestOverall?.month}
+                  />
+                  <SummaryMetric
+                    label="Members"
+                    value={number(analytics.kpis.activeMembers)}
+                  />
+                  <SummaryMetric
+                    label="Top Member"
+                    value={analytics.kpis.topMember ?? "N/A"}
+                  />
+                  <SummaryMetric label="Top SKU" value={analytics.kpis.topSku ?? "N/A"} />
+                </div>
               </CardContent>
             </Card>
-          ) : null}
+
+            <RollingChartCard
+              title="Midstate Overall Rolling 12 Months"
+              data={analytics.overallRollingMonths}
+              mode={overallChartMode}
+              onModeChange={setOverallChartMode}
+              emptyState="No Midstate rolling data yet."
+            />
+          </section>
+
+          <section className="space-y-4" aria-labelledby="selected-member-title">
+            <h2
+              id="selected-member-title"
+              className="text-sm font-semibold uppercase tracking-normal text-zinc-500"
+            >
+              Selected Member
+            </h2>
+            {analytics.selectedMember ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Selected Member Snapshot</CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-3 sm:grid-cols-3">
+                  <SummaryMetric
+                    label="Member"
+                    value={analytics.selectedMember.memberName}
+                    detail={analytics.selectedMember.memberNumber}
+                  />
+                  <SummaryMetric
+                    label="Rolling 12 Qty"
+                    value={number(totalQuantity(analytics.rollingMonths))}
+                  />
+                  <SummaryMetric
+                    label="Latest Month Qty"
+                    value={number(latestMember?.quantity ?? 0)}
+                    detail={latestMember?.month}
+                  />
+                </CardContent>
+              </Card>
+            ) : null}
+
+            <RollingChartCard
+              title={chartTitle(analytics)}
+              data={memberData}
+              mode={memberChartMode}
+              onModeChange={setMemberChartMode}
+              emptyState="Select a member to view its rolling 12-month trend."
+              action={
+                memberItemBreakdown ? (
+                  <Button
+                    variant="secondary"
+                    onClick={() => setIsMemberItemsOpen(true)}
+                  >
+                    View Items
+                  </Button>
+                ) : null
+              }
+            />
+          </section>
 
           <ItemRankingCard
             category={itemCategory}
