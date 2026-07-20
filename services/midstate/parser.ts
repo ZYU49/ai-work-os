@@ -55,8 +55,6 @@ export const midstateRequiredHeaders = [
   "Order Class",
   "Qty Shipped",
   "Post Date",
-  "Cost",
-  "Cost Ext",
 ] as const;
 
 function textValue(value: unknown) {

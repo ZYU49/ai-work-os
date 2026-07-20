@@ -1,5 +1,23 @@
-import { describe, expect, test } from "vitest";
-import { summarizeMidstateRowsForTest } from "@/services/midstate/metrics";
+import { beforeEach, describe, expect, test, vi } from "vitest";
+import {
+  getMidstateAnalytics,
+  summarizeMidstateRowsForTest,
+} from "@/services/midstate/metrics";
+
+const { mockPrisma } = vi.hoisted(() => ({
+  mockPrisma: {
+    midstateImport: {
+      findFirst: vi.fn(),
+    },
+    midstateSellThroughRecord: {
+      findMany: vi.fn(),
+    },
+  },
+}));
+
+vi.mock("@/lib/db", () => ({
+  prisma: mockPrisma,
+}));
 
 const rows = [
   { postDate: new Date(2025, 4, 1), memberNumber: "82801", memberName: "Bomgaars", sku: "WD1030", description: "Wheel", orderClass: "Warehouse", category: null, quantity: 100, costExt: 1000 },
@@ -10,6 +28,10 @@ const rows = [
 ];
 
 describe("midstate metrics", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   test("summarizes YTD, current month, rankings, and order class split", () => {
     const analytics = summarizeMidstateRowsForTest(rows, {
       year: 2026,
@@ -325,5 +347,59 @@ describe("midstate metrics", () => {
         },
       ],
     });
+  });
+
+  test("loads analytics from the latest imported Midstate rolling file only", async () => {
+    mockPrisma.midstateImport.findFirst.mockResolvedValue({
+      id: "june-import",
+    });
+    mockPrisma.midstateSellThroughRecord.findMany
+      .mockResolvedValueOnce([
+        {
+          postDate: new Date(2026, 5, 30),
+          memberNumber: "82801",
+          memberName: "Bomgaars",
+          sku: "WD1030",
+          description: "Wheel",
+          orderClass: "Warehouse",
+          category: null,
+          quantity: 25,
+          costExt: null,
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          postDate: new Date(2026, 5, 30),
+          memberNumber: "82801",
+          memberName: "Bomgaars",
+          sku: "WD1030",
+          description: "Wheel",
+          orderClass: "Warehouse",
+          category: null,
+          quantity: 25,
+          costExt: null,
+        },
+      ]);
+
+    const analytics = await getMidstateAnalytics({ year: 2026 });
+
+    expect(mockPrisma.midstateImport.findFirst).toHaveBeenCalledWith({
+      where: { status: "imported" },
+      orderBy: [
+        { periodYear: "desc" },
+        { periodMonth: "desc" },
+        { createdAt: "desc" },
+      ],
+      select: { id: true },
+    });
+    expect(mockPrisma.midstateSellThroughRecord.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          importId: "june-import",
+        }),
+      }),
+    );
+    expect(mockPrisma.midstateSellThroughRecord.findMany).toHaveBeenCalledTimes(2);
+    expect(analytics.kpis.currentMonthQuantity).toBe(25);
   });
 });

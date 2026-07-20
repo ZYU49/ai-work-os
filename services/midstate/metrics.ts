@@ -1,4 +1,4 @@
-import type { MidstateSellThroughRecord } from "@prisma/client";
+import { MidstateImportStatus, type MidstateSellThroughRecord } from "@prisma/client";
 import { z } from "zod";
 import { getMidstateItemMetadata } from "@/services/midstate/item-master";
 
@@ -792,6 +792,20 @@ export async function getMidstateAnalytics(
   const year = parsedFilters.year ?? new Date().getFullYear();
   const { startMonth, endMonth } = monthRange(parsedFilters);
   const { prisma } = await import("@/lib/db");
+  const latestImport = await prisma.midstateImport.findFirst({
+    where: { status: MidstateImportStatus.imported },
+    orderBy: [
+      { periodYear: "desc" },
+      { periodMonth: "desc" },
+      { createdAt: "desc" },
+    ],
+    select: { id: true },
+  });
+
+  if (!latestImport) {
+    return summarizeMidstateRowsForTest([], { ...parsedFilters, year }, []);
+  }
+
   const dateWhere = {
     gte: new Date(year - 1, startMonth - 1, 1),
     lt: new Date(year, endMonth, 1),
@@ -810,6 +824,7 @@ export async function getMidstateAnalytics(
   const [rows, filterOptionRows] = await Promise.all([
     prisma.midstateSellThroughRecord.findMany({
       where: {
+        importId: latestImport.id,
         postDate: dateWhere,
         ...(parsedFilters.memberNumber
           ? { memberNumber: parsedFilters.memberNumber }
@@ -824,6 +839,7 @@ export async function getMidstateAnalytics(
     }),
     prisma.midstateSellThroughRecord.findMany({
       where: {
+        importId: latestImport.id,
         postDate: dateWhere,
       },
       select,

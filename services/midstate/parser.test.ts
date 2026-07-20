@@ -21,6 +21,10 @@ const headers = [
   "Cost Ext",
 ];
 
+const quantityOnlyHeaders = headers.filter(
+  (header) => header !== "Cost" && header !== "Cost Ext",
+);
+
 function workbookBuffer(rows: unknown[][], sheetName = "RAW DATA") {
   const workbook = utils.book_new();
   utils.book_append_sheet(workbook, utils.aoa_to_sheet(rows), sheetName);
@@ -227,6 +231,44 @@ describe("midstate parser", () => {
     expect(preview.totalQuantity).toBe(0);
     expect(preview.memberCount).toBe(0);
     expect(preview.skuCount).toBe(0);
+  });
+
+  test("allows Midstate RAW DATA files without optional cost columns", () => {
+    const buffer = workbookBuffer([
+      quantityOnlyHeaders,
+      [
+        "Sutong",
+        10047918,
+        "4.80/4.00-8-4 WB",
+        "CT1008",
+        "Bomgaars",
+        "82801",
+        "1001718",
+        "Warehouse",
+        2,
+        new Date(2026, 5, 1),
+      ],
+    ]);
+
+    const preview = extractMidstatePreview({
+      buffer,
+      fileName: "1001718 Jun 2026.xlsx",
+    });
+    const [row] = rowsFromMidstateWorkbook(buffer);
+    const normalized = normalizeMidstateRow(row);
+
+    expect(preview.headers).toEqual(quantityOnlyHeaders);
+    expect(preview.totalRows).toBe(1);
+    expect(preview.totalQuantity).toBe(2);
+    expect(preview.periodYear).toBe(2026);
+    expect(preview.periodMonth).toBe(6);
+    expect(normalized).toMatchObject({
+      ok: true,
+      record: {
+        cost: null,
+        costExt: null,
+      },
+    });
   });
 
   test("requires the RAW DATA worksheet", () => {
