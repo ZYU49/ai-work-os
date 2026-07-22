@@ -10,7 +10,7 @@ describe("AnalyticsSectionSwitcher", () => {
     cleanup();
   });
 
-  test("renders shortcuts for Sales and Midstate analytics", () => {
+  test("renders shortcuts for all analytics sections", () => {
     render(<AnalyticsSectionSwitcher current="sales" />);
 
     expect(screen.getByRole("link", { name: "Sales Analytics" })).toHaveAttribute(
@@ -20,14 +20,19 @@ describe("AnalyticsSectionSwitcher", () => {
     expect(
       screen.getByRole("link", { name: "Midstate Member Analytics" }),
     ).toHaveAttribute("href", "/analytics/midstate");
+    expect(screen.getByRole("link", { name: "Warehouse Overdue" })).toHaveAttribute(
+      "href",
+      "/analytics/warehouse-overdue",
+    );
   });
 
   test("marks the current analytics section", () => {
-    render(<AnalyticsSectionSwitcher current="midstate" />);
+    render(<AnalyticsSectionSwitcher current="warehouse-overdue" />);
 
-    expect(
-      screen.getByRole("link", { name: "Midstate Member Analytics" }),
-    ).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Warehouse Overdue" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
     expect(screen.getByRole("link", { name: "Sales Analytics" })).not.toHaveAttribute(
       "aria-current",
     );

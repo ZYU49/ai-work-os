@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-type AnalyticsSection = "sales" | "midstate";
+type AnalyticsSection = "sales" | "midstate" | "warehouse-overdue";
 
 const sections: Array<{
   id: AnalyticsSection;
@@ -12,6 +12,11 @@ const sections: Array<{
     id: "midstate",
     label: "Midstate Member Analytics",
     href: "/analytics/midstate",
+  },
+  {
+    id: "warehouse-overdue",
+    label: "Warehouse Overdue",
+    href: "/analytics/warehouse-overdue",
   },
 ];
 
