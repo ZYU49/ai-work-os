@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardCopy } from "lucide-react";
+import { ClipboardCopy, Upload } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import {
   type WarehouseOverdueRow,
   type WarehouseOverdueSalesPersonSummary,
 } from "@/services/warehouse-overdue/monitor";
+import { readWarehouseOverdueFile } from "@/services/warehouse-overdue/file-reader";
 
 function number(value: number) {
   return new Intl.NumberFormat().format(value);
@@ -157,6 +158,9 @@ function EmptyState() {
 
 export function WarehouseOverdueMonitor() {
   const [text, setText] = useState("");
+  const [uploadStatus, setUploadStatus] = useState<
+    "idle" | "loaded" | "failed"
+  >("idle");
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">(
     "idle",
   );
@@ -179,6 +183,19 @@ export function WarehouseOverdueMonitor() {
     }
   }
 
+  async function uploadReportFile(file: File | undefined) {
+    if (!file) return;
+
+    try {
+      const fileText = await readWarehouseOverdueFile(file);
+      setText(fileText);
+      setUploadStatus("loaded");
+      setCopyStatus("idle");
+    } catch {
+      setUploadStatus("failed");
+    }
+  }
+
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(320px,420px)_1fr]">
       <Card className="xl:sticky xl:top-6 xl:self-start">
@@ -186,6 +203,32 @@ export function WarehouseOverdueMonitor() {
           <CardTitle>Paste Report</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              id="warehouse-overdue-file"
+              aria-label="Upload report file"
+              type="file"
+              accept=".msg,.txt,.csv,text/plain"
+              className="sr-only"
+              onChange={(event) => {
+                void uploadReportFile(event.target.files?.[0]);
+                event.target.value = "";
+              }}
+            />
+            <label
+              htmlFor="warehouse-overdue-file"
+              className="inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-md border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-900 shadow-sm transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-500"
+            >
+              <Upload className="h-4 w-4" aria-hidden="true" />
+              Upload .msg / text
+            </label>
+            {uploadStatus === "loaded" ? (
+              <Badge tone="green">Loaded</Badge>
+            ) : null}
+            {uploadStatus === "failed" ? (
+              <Badge tone="red">Upload failed</Badge>
+            ) : null}
+          </div>
           <label
             htmlFor="warehouse-overdue-report"
             className="text-sm font-medium text-zinc-700"
@@ -197,6 +240,7 @@ export function WarehouseOverdueMonitor() {
             value={text}
             onChange={(event) => {
               setText(event.target.value);
+              setUploadStatus("idle");
               setCopyStatus("idle");
             }}
             className="min-h-[360px] font-mono text-xs leading-5"

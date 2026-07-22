@@ -39,6 +39,21 @@ describe("WarehouseOverdueMonitor", () => {
     expect(screen.getByLabelText("Needs attention")).toHaveTextContent("653687");
   });
 
+  test("loads an overdue report from an uploaded text file", async () => {
+    render(<WarehouseOverdueMonitor />);
+
+    const file = new File([reportText], "warehouse-overdue.txt", {
+      type: "text/plain",
+    });
+    fireEvent.change(screen.getByLabelText("Upload report file"), {
+      target: { files: [file] },
+    });
+
+    expect(await screen.findByText("4,303")).toBeVisible();
+    expect(screen.getByLabelText("Paste OA overdue report")).toHaveValue(reportText);
+    expect(screen.getByLabelText("Needs attention")).toHaveTextContent("653687");
+  });
+
   test("copies the generated follow-up summary", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     vi.stubGlobal("navigator", {
