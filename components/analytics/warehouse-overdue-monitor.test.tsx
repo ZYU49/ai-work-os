@@ -36,6 +36,7 @@ describe("WarehouseOverdueMonitor", () => {
     expect(screen.getByText("Bella Cui")).toBeVisible();
     expect(screen.getByText("TRACTOR SUPPLY COMPANY")).toBeVisible();
     expect(screen.getAllByText("WAL-MART.COM").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Missing Reason")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Needs attention")).toHaveTextContent("653687");
   });
 

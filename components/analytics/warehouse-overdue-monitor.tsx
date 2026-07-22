@@ -278,7 +278,7 @@ export function WarehouseOverdueMonitor() {
                 </div>
                 <Badge tone="blue">Allen + Bella only</Badge>
               </CardHeader>
-              <CardContent className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+              <CardContent className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <SummaryMetric
                   label="Open Qty"
                   value={number(analysis.summary.totalOpenQty)}
@@ -295,10 +295,6 @@ export function WarehouseOverdueMonitor() {
                 <SummaryMetric
                   label="SHR NO"
                   value={number(analysis.summary.noShrCount)}
-                />
-                <SummaryMetric
-                  label="Missing Reason"
-                  value={number(analysis.summary.missingReasonCount)}
                 />
               </CardContent>
             </Card>
