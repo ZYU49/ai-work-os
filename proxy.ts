@@ -22,6 +22,10 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  if (process.env.APP_ACCESS_ENABLED !== "true") {
+    return NextResponse.next();
+  }
+
   const config = {
     username: process.env.APP_ACCESS_USERNAME || "allen",
     password: process.env.APP_ACCESS_PASSWORD,
