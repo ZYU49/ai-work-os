@@ -23,7 +23,11 @@ describe("SalesDeskBriefingWidget", () => {
 
     render(<SalesDeskBriefingWidget />);
 
-    expect(screen.getByText("ST")).toBeVisible();
+    expect(screen.getByRole("img", { name: "Sutong reporter" })).toHaveAttribute(
+      "src",
+      expect.stringContaining("sutong-reporter.png"),
+    );
+    expect(screen.queryByText("ST")).not.toBeInTheDocument();
     expect(screen.getByText("SalesDesk Briefing")).toBeVisible();
     expect(screen.getByText("Sales data updated")).toBeVisible();
     expect(

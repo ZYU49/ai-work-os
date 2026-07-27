@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { CalendarDays, ChevronDown, Megaphone, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -42,6 +43,20 @@ function eventDaySet(events: BriefingEvent[]) {
   return new Set(events.map((event) => new Date(event.createdAt).getDate()));
 }
 
+function SutongReporterAvatar() {
+  return (
+    <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-md border border-zinc-200 bg-white">
+      <Image
+        src="/sutong-reporter.png"
+        alt="Sutong reporter"
+        width={40}
+        height={40}
+        className="h-full w-full object-contain p-0.5"
+      />
+    </div>
+  );
+}
+
 type SalesDeskBriefingWidgetProps = {
   className?: string;
 };
@@ -78,9 +93,7 @@ export function SalesDeskBriefingWidget({
         <div className="absolute bottom-full left-0 mb-3 w-[min(360px,calc(100vw-2rem))] overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-xl">
           <div className="flex items-start justify-between border-b border-zinc-100 p-4">
             <div className="flex items-center gap-3">
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-zinc-950 text-sm font-semibold text-white">
-                ST
-              </div>
+              <SutongReporterAvatar />
               <div>
                 <p className="text-sm font-semibold text-zinc-950">
                   SalesDesk Briefing
@@ -176,9 +189,7 @@ export function SalesDeskBriefingWidget({
         onClick={() => setIsOpen((current) => !current)}
         className="flex w-full items-center gap-3 rounded-lg border border-zinc-200 bg-white p-3 text-left shadow-sm transition hover:bg-zinc-50 hover:shadow-md"
       >
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-zinc-950 text-sm font-semibold text-white">
-          ST
-        </div>
+        <SutongReporterAvatar />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <Megaphone className="size-4 text-zinc-500" aria-hidden="true" />
