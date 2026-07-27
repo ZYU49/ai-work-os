@@ -16,6 +16,7 @@ import {
   Settings,
   StickyNote,
 } from "lucide-react";
+import { SalesDeskBriefingWidget } from "@/components/briefing/salesdesk-briefing-widget";
 import { cn } from "@/lib/cn";
 
 const navItems = [
@@ -37,7 +38,7 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="flex border-b border-zinc-200 bg-white md:min-h-screen md:w-64 md:flex-col md:border-b-0 md:border-r">
+    <aside className="flex border-b border-zinc-200 bg-white md:sticky md:top-0 md:h-screen md:w-64 md:flex-col md:border-b-0 md:border-r">
       <div className="flex h-14 shrink-0 items-center gap-3 border-r border-zinc-200 px-4 md:h-16 md:border-r-0 md:border-b">
         <div className="flex size-8 items-center justify-center rounded-md bg-zinc-950 text-sm font-semibold text-white">
           SD
@@ -50,31 +51,37 @@ export function Sidebar() {
         </div>
       </div>
 
-      <nav
-        aria-label="Primary"
-        className="flex flex-1 gap-1 overflow-x-auto p-2 md:flex-col md:overflow-x-visible"
-      >
-        {navItems.map((item) => {
-          const isActive =
-            pathname === item.href || pathname.startsWith(`${item.href}/`);
-          const Icon = item.icon;
+      <div className="flex min-w-0 flex-1 md:flex-col">
+        <nav
+          aria-label="Primary"
+          className="flex flex-1 gap-1 overflow-x-auto p-2 md:flex-col md:overflow-y-auto md:overflow-x-visible"
+        >
+          {navItems.map((item) => {
+            const isActive =
+              pathname === item.href || pathname.startsWith(`${item.href}/`);
+            const Icon = item.icon;
 
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-current={isActive ? "page" : undefined}
-              className={cn(
-                "flex h-9 shrink-0 items-center gap-2 rounded-md px-3 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-950 md:w-full",
-                isActive && "bg-zinc-100 text-zinc-950",
-              )}
-            >
-              <Icon className="size-4" aria-hidden="true" />
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-current={isActive ? "page" : undefined}
+                className={cn(
+                  "flex h-9 shrink-0 items-center gap-2 rounded-md px-3 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-950 md:w-full",
+                  isActive && "bg-zinc-100 text-zinc-950",
+                )}
+              >
+                <Icon className="size-4" aria-hidden="true" />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="hidden border-t border-zinc-200 p-2 md:block">
+          <SalesDeskBriefingWidget />
+        </div>
+      </div>
     </aside>
   );
 }

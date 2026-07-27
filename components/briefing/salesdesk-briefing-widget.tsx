@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { CalendarDays, ChevronDown, Megaphone, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { cn } from "@/lib/cn";
 import {
   defaultBriefing,
   readBriefings,
@@ -41,7 +42,13 @@ function eventDaySet(events: BriefingEvent[]) {
   return new Set(events.map((event) => new Date(event.createdAt).getDate()));
 }
 
-export function SalesDeskBriefingWidget() {
+type SalesDeskBriefingWidgetProps = {
+  className?: string;
+};
+
+export function SalesDeskBriefingWidget({
+  className,
+}: SalesDeskBriefingWidgetProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [events, setEvents] = useState<BriefingEvent[]>([]);
   const [now, setNow] = useState<Date | null>(null);
@@ -66,9 +73,9 @@ export function SalesDeskBriefingWidget() {
   const eventDays = useMemo(() => eventDaySet(events), [events]);
 
   return (
-    <div className="fixed bottom-4 left-4 z-40 w-[min(360px,calc(100vw-2rem))] md:left-[17rem]">
+    <div className={cn("relative z-40 w-full", className)}>
       {isOpen ? (
-        <div className="mb-3 overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-xl">
+        <div className="absolute bottom-full left-0 mb-3 w-[min(360px,calc(100vw-2rem))] overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-xl">
           <div className="flex items-start justify-between border-b border-zinc-100 p-4">
             <div className="flex items-center gap-3">
               <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-zinc-950 text-sm font-semibold text-white">
@@ -167,7 +174,7 @@ export function SalesDeskBriefingWidget() {
         type="button"
         aria-label="Open briefing calendar"
         onClick={() => setIsOpen((current) => !current)}
-        className="flex w-full items-center gap-3 rounded-lg border border-zinc-200 bg-white p-3 text-left shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl"
+        className="flex w-full items-center gap-3 rounded-lg border border-zinc-200 bg-white p-3 text-left shadow-sm transition hover:bg-zinc-50 hover:shadow-md"
       >
         <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-zinc-950 text-sm font-semibold text-white">
           ST
