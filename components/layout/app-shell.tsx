@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { SalesDeskBriefingWidget } from "@/components/briefing/salesdesk-briefing-widget";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 
@@ -14,6 +15,7 @@ export function AppShell({ children }: AppShellProps) {
         <Topbar />
         <main className="flex-1 px-4 py-6 md:px-6">{children}</main>
       </div>
+      <SalesDeskBriefingWidget />
     </div>
   );
 }

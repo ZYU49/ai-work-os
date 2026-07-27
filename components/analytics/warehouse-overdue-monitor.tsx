@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { addBriefing } from "@/services/briefing/local-store";
 import {
   analyzeWarehouseOverdueReport,
   type WarehouseOverdueAnalysis,
@@ -188,9 +189,19 @@ export function WarehouseOverdueMonitor() {
 
     try {
       const fileText = await readWarehouseOverdueFile(file);
+      const fileAnalysis = analyzeWarehouseOverdueReport(fileText);
       setText(fileText);
       setUploadStatus("loaded");
       setCopyStatus("idle");
+      if (fileAnalysis.rows.length > 0) {
+        addBriefing({
+          kind: "warehouse",
+          title: "Warehouse overdue updated",
+          message: `${fileAnalysis.warehouse ?? "Warehouse"} report ${fileAnalysis.reportDate ?? "date unavailable"} is updated. Allen/Bella open qty is ${number(fileAnalysis.summary.totalOpenQty)}.`,
+          createdAt: new Date().toISOString(),
+          href: "/analytics/warehouse-overdue",
+        });
+      }
     } catch {
       setUploadStatus("failed");
     }

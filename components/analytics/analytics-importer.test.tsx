@@ -10,10 +10,12 @@ import {
 } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { AnalyticsImporter } from "@/components/analytics/analytics-importer";
+import { readBriefings } from "@/services/briefing/local-store";
 
 describe("AnalyticsImporter", () => {
   afterEach(() => {
     cleanup();
+    localStorage.clear();
     vi.unstubAllGlobals();
   });
 
@@ -115,6 +117,13 @@ describe("AnalyticsImporter", () => {
     expect(
       screen.queryByRole("link", { name: /open dashboard/i }),
     ).not.toBeInTheDocument();
+    expect(readBriefings()[0]).toEqual(
+      expect.objectContaining({
+        kind: "sales",
+        title: "Sales data updated",
+        href: "/analytics",
+      }),
+    );
   });
 
   test("shows upload errors from the API", async () => {

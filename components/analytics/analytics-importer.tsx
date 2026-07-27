@@ -11,6 +11,7 @@ import {
   type SalesFieldKey,
   type SalesFieldMapping,
 } from "@/services/analytics/fields";
+import { addBriefing } from "@/services/briefing/local-store";
 
 type ImportPreview = {
   importId: string;
@@ -154,6 +155,13 @@ export function AnalyticsImporter() {
       }
 
       setSummary(data.summary);
+      addBriefing({
+        kind: "sales",
+        title: "Sales data updated",
+        message: `${preview.fileName} imported. ${data.summary.importedRows.toLocaleString()} rows are ready for YTD and monthly comparison.`,
+        createdAt: new Date().toISOString(),
+        href: "/analytics",
+      });
     } catch (commitError) {
       setError(
         commitError instanceof Error

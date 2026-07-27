@@ -10,6 +10,7 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { MidstateImporter } from "@/components/analytics/midstate/midstate-importer";
+import { readBriefings } from "@/services/briefing/local-store";
 
 describe("MidstateImporter", () => {
   beforeEach(() => {
@@ -18,6 +19,7 @@ describe("MidstateImporter", () => {
 
   afterEach(() => {
     cleanup();
+    localStorage.clear();
     vi.unstubAllGlobals();
   });
 
@@ -83,6 +85,13 @@ describe("MidstateImporter", () => {
     expect(
       await screen.findByText(/Imported 7,572 of 7,572 rows/),
     ).toBeInTheDocument();
+    expect(readBriefings()[0]).toEqual(
+      expect.objectContaining({
+        kind: "midstate",
+        title: "Midstate data updated",
+        href: "/analytics/midstate",
+      }),
+    );
   });
 
   test("retries duplicate periods with replacement enabled", async () => {

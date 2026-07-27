@@ -4,6 +4,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { WarehouseOverdueMonitor } from "@/components/analytics/warehouse-overdue-monitor";
+import { readBriefings } from "@/services/briefing/local-store";
 
 const reportText = `
 Please find the warehouse orders overdue report as of 2026-07-21 below:
@@ -20,6 +21,7 @@ SO#	 SHR Created?	 SO Date	 Requested Delivery Date	 Delayed Days	 Customer	 Tot
 describe("WarehouseOverdueMonitor", () => {
   afterEach(() => {
     cleanup();
+    localStorage.clear();
     vi.unstubAllGlobals();
   });
 
@@ -53,6 +55,13 @@ describe("WarehouseOverdueMonitor", () => {
     expect(await screen.findByText("4,303")).toBeVisible();
     expect(screen.getByLabelText("Paste OA overdue report")).toHaveValue(reportText);
     expect(screen.getByLabelText("Needs attention")).toHaveTextContent("653687");
+    expect(readBriefings()[0]).toEqual(
+      expect.objectContaining({
+        kind: "warehouse",
+        title: "Warehouse overdue updated",
+        href: "/analytics/warehouse-overdue",
+      }),
+    );
   });
 
   test("copies the generated follow-up summary", async () => {

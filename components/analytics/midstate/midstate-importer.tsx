@@ -5,6 +5,7 @@ import { ArrowRight, UploadCloud } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { addBriefing } from "@/services/briefing/local-store";
 
 type MidstateImportPreview = {
   importId: string;
@@ -49,6 +50,14 @@ function dateRangeLabel(range: MidstateImportPreview["dateRange"]) {
   }
 
   return `${range.start} to ${range.end}`;
+}
+
+function periodLabel(preview: MidstateImportPreview) {
+  if (!preview.periodYear || !preview.periodMonth) {
+    return "Midstate";
+  }
+
+  return `${preview.periodYear}-${String(preview.periodMonth).padStart(2, "0")}`;
 }
 
 function PreviewMetric({ label, value }: { label: string; value: string }) {
@@ -151,6 +160,13 @@ export function MidstateImporter() {
       }
 
       setSummary(data.summary);
+      addBriefing({
+        kind: "midstate",
+        title: "Midstate data updated",
+        message: `${periodLabel(preview)} Midstate data is updated. Rolling 12-month view is ready.`,
+        createdAt: new Date().toISOString(),
+        href: "/analytics/midstate",
+      });
       setShowReplaceExisting(false);
     } catch (commitError) {
       setError(
