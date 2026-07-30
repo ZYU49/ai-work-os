@@ -45,6 +45,15 @@ function money(value: number) {
   }).format(value);
 }
 
+function compactMoney(value: number) {
+  return new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency: "USD",
+    notation: "compact",
+    maximumFractionDigits: 1,
+  }).format(value);
+}
+
 function percent(value: number | null | undefined) {
   return value == null
     ? "N/A"
@@ -121,6 +130,8 @@ export function YoYComparisonChart({
   const priorDataKey =
     metric === "quantity" ? "priorQuantity" : "priorRevenue";
   const metricLabel = metric === "quantity" ? "Qty" : "Sales";
+  const yAxisTickFormatter =
+    metric === "quantity" ? undefined : (value: number) => compactMoney(value);
 
   return (
     <div className="flex min-w-0 flex-col gap-3">
@@ -146,11 +157,16 @@ export function YoYComparisonChart({
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart
             data={data}
-            margin={{ top: 4, right: 8, left: -12, bottom: 0 }}
+            margin={{ top: 4, right: 8, left: metric === "quantity" ? -12 : 8, bottom: 0 }}
           >
             <CartesianGrid stroke="#e4e4e7" vertical={false} />
             <XAxis dataKey="monthLabel" tick={{ fontSize: 12 }} tickLine={false} />
-            <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+            <YAxis
+              tick={{ fontSize: 12 }}
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={yAxisTickFormatter}
+            />
             <Tooltip content={<YoYTooltip metric={metric} />} />
             <Bar
               dataKey={currentDataKey}
