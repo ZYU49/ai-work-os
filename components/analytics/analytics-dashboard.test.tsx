@@ -180,11 +180,37 @@ describe("AnalyticsDashboard", () => {
     expect(screen.getByText(/Rev 25%/i)).toBeVisible();
     expect(screen.queryByText("Avg Unit Price")).not.toBeInTheDocument();
     expect(screen.queryByText("Active Customers")).not.toBeInTheDocument();
-    expect(screen.getByText("YoY Quantity Comparison")).toBeVisible();
-    expect(screen.getByText("YoY Sales Dollars Comparison")).toBeVisible();
+    expect(screen.getByText("YoY Comparison")).toBeVisible();
+    expect(screen.queryByText("YoY Quantity Comparison")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("YoY Sales Dollars Comparison"),
+    ).not.toBeInTheDocument();
     expect(screen.getAllByText("Scope: 2026 YTD Jan-Jun").length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: "Quantity" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByRole("button", { name: "Sales Dollars" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
     expect(screen.getByText("2026 Qty")).toBeVisible();
     expect(screen.getByText("2025 Qty")).toBeVisible();
+    expect(screen.queryByText("2026 Sales")).not.toBeInTheDocument();
+    expect(screen.queryByText("2025 Sales")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Sales Dollars" }));
+
+    expect(screen.getByRole("button", { name: "Quantity" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+    expect(screen.getByRole("button", { name: "Sales Dollars" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.queryByText("2026 Qty")).not.toBeInTheDocument();
+    expect(screen.queryByText("2025 Qty")).not.toBeInTheDocument();
     expect(screen.getByText("2026 Sales")).toBeVisible();
     expect(screen.getByText("2025 Sales")).toBeVisible();
     expect(screen.getByRole("button", { name: /refresh/i })).toBeEnabled();

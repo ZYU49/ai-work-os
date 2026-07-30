@@ -46,6 +46,8 @@ type SalesAnalytics = {
   filterOptions: SalesFilterOptions;
 };
 
+type YoYMetric = "quantity" | "revenue";
+
 function money(value: number) {
   return new Intl.NumberFormat(undefined, {
     style: "currency",
@@ -119,6 +121,7 @@ function scopeLabel(
 export function AnalyticsDashboard() {
   const [analytics, setAnalytics] = useState<SalesAnalytics | null>(null);
   const [filters, setFilters] = useState<SalesDashboardFilters>(defaultFilters);
+  const [yoyMetric, setYoyMetric] = useState<YoYMetric>("quantity");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -279,20 +282,38 @@ export function AnalyticsDashboard() {
             <MonthlyTrendChart data={analytics.monthly} />
           </ChartCard>
 
-          <div className="grid min-w-0 gap-6 lg:grid-cols-2">
-            <ChartCard title="YoY Quantity Comparison" subtitle={currentScopeLabel}>
-              <YoYComparisonChart data={analytics.yoyComparison} />
-            </ChartCard>
-            <ChartCard
-              title="YoY Sales Dollars Comparison"
-              subtitle={currentScopeLabel}
-            >
-              <YoYComparisonChart
-                data={analytics.yoyComparison}
-                metric="revenue"
-              />
-            </ChartCard>
-          </div>
+          <ChartCard title="YoY Comparison" subtitle={currentScopeLabel}>
+            <div className="mb-4 inline-flex rounded-md border border-zinc-200 bg-zinc-50 p-1">
+              <button
+                type="button"
+                aria-pressed={yoyMetric === "quantity"}
+                onClick={() => setYoyMetric("quantity")}
+                className={`rounded px-3 py-1.5 text-xs font-medium transition ${
+                  yoyMetric === "quantity"
+                    ? "bg-zinc-950 text-white shadow-sm"
+                    : "text-zinc-600 hover:bg-white hover:text-zinc-950"
+                }`}
+              >
+                Quantity
+              </button>
+              <button
+                type="button"
+                aria-pressed={yoyMetric === "revenue"}
+                onClick={() => setYoyMetric("revenue")}
+                className={`rounded px-3 py-1.5 text-xs font-medium transition ${
+                  yoyMetric === "revenue"
+                    ? "bg-zinc-950 text-white shadow-sm"
+                    : "text-zinc-600 hover:bg-white hover:text-zinc-950"
+                }`}
+              >
+                Sales Dollars
+              </button>
+            </div>
+            <YoYComparisonChart
+              data={analytics.yoyComparison}
+              metric={yoyMetric === "quantity" ? "quantity" : "revenue"}
+            />
+          </ChartCard>
 
           <div className="grid min-w-0 gap-6 lg:grid-cols-2">
             <ChartCard title="Top Customers" subtitle={currentScopeLabel}>
