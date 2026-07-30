@@ -279,9 +279,20 @@ export function AnalyticsDashboard() {
             <MonthlyTrendChart data={analytics.monthly} />
           </ChartCard>
 
-          <ChartCard title="YoY Quantity Comparison" subtitle={currentScopeLabel}>
-            <YoYComparisonChart data={analytics.yoyComparison} />
-          </ChartCard>
+          <div className="grid min-w-0 gap-6 lg:grid-cols-2">
+            <ChartCard title="YoY Quantity Comparison" subtitle={currentScopeLabel}>
+              <YoYComparisonChart data={analytics.yoyComparison} />
+            </ChartCard>
+            <ChartCard
+              title="YoY Sales Dollars Comparison"
+              subtitle={currentScopeLabel}
+            >
+              <YoYComparisonChart
+                data={analytics.yoyComparison}
+                metric="revenue"
+              />
+            </ChartCard>
+          </div>
 
           <div className="grid min-w-0 gap-6 lg:grid-cols-2">
             <ChartCard title="Top Customers" subtitle={currentScopeLabel}>

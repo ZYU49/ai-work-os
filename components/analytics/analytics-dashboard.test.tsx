@@ -181,9 +181,12 @@ describe("AnalyticsDashboard", () => {
     expect(screen.queryByText("Avg Unit Price")).not.toBeInTheDocument();
     expect(screen.queryByText("Active Customers")).not.toBeInTheDocument();
     expect(screen.getByText("YoY Quantity Comparison")).toBeVisible();
+    expect(screen.getByText("YoY Sales Dollars Comparison")).toBeVisible();
     expect(screen.getAllByText("Scope: 2026 YTD Jan-Jun").length).toBeGreaterThan(0);
     expect(screen.getByText("2026 Qty")).toBeVisible();
     expect(screen.getByText("2025 Qty")).toBeVisible();
+    expect(screen.getByText("2026 Sales")).toBeVisible();
+    expect(screen.getByText("2025 Sales")).toBeVisible();
     expect(screen.getByRole("button", { name: /refresh/i })).toBeEnabled();
     expect(screen.getAllByText("Acme Tire").length).toBeGreaterThan(0);
     expect(screen.getByText("Salesperson Split")).toBeVisible();
