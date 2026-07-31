@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { ChartCard } from "@/components/analytics/chart-card";
 import { KpiCard } from "@/components/analytics/kpi-card";
 import { MonthlyTrendChart } from "@/components/analytics/monthly-trend-chart";
@@ -282,7 +283,18 @@ export function AnalyticsDashboard() {
             <MonthlyTrendChart data={analytics.monthly} />
           </ChartCard>
 
-          <ChartCard title="YoY Comparison" subtitle={currentScopeLabel}>
+          <ChartCard
+            title="YoY Comparison"
+            subtitle={currentScopeLabel}
+            action={
+              <Link
+                href="/analytics/product-yoy"
+                className="inline-flex h-8 items-center justify-center rounded-md border border-zinc-200 bg-white px-3 text-xs font-medium text-zinc-900 shadow-sm transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-500"
+              >
+                Product YoY Table
+              </Link>
+            }
+          >
             <div className="mb-4 inline-flex rounded-md border border-zinc-200 bg-zinc-50 p-1">
               <button
                 type="button"

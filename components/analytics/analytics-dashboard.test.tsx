@@ -181,6 +181,10 @@ describe("AnalyticsDashboard", () => {
     expect(screen.queryByText("Avg Unit Price")).not.toBeInTheDocument();
     expect(screen.queryByText("Active Customers")).not.toBeInTheDocument();
     expect(screen.getByText("YoY Comparison")).toBeVisible();
+    expect(screen.getByRole("link", { name: "Product YoY Table" })).toHaveAttribute(
+      "href",
+      "/analytics/product-yoy",
+    );
     expect(screen.queryByText("YoY Quantity Comparison")).not.toBeInTheDocument();
     expect(
       screen.queryByText("YoY Sales Dollars Comparison"),
