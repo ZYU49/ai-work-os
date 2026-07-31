@@ -6,7 +6,7 @@ import {
 
 type ProductYoYSourceRow = Pick<
   SalesRecord,
-  "orderDate" | "sku" | "productName"
+  "orderDate" | "customerName" | "sku" | "productName"
 > & {
   quantity: number;
 };
@@ -25,6 +25,9 @@ export type ProductYoYOverview = {
   priorYear: number;
   months: number[];
   rows: ProductYoYRow[];
+  filterOptions: {
+    customers: string[];
+  };
 };
 
 function normalizeDescription(value: string | null | undefined) {
@@ -43,6 +46,11 @@ function addQuantity(map: Map<string, number>, sku: string, quantity: number) {
   map.set(sku, (map.get(sku) ?? 0) + quantity);
 }
 
+function unique(values: Array<string | null | undefined>) {
+  return [...new Set(values.filter((value): value is string => Boolean(value)))]
+    .sort((a, b) => a.localeCompare(b));
+}
+
 export function summarizeProductYoYRowsForTest(
   rows: ProductYoYSourceRow[],
   filters: SalesAnalyticsFilters,
@@ -50,7 +58,17 @@ export function summarizeProductYoYRowsForTest(
   const parsedFilters = salesAnalyticsFiltersSchema.parse(filters);
   const currentYear = parsedFilters.year ?? new Date().getFullYear();
   const priorYear = currentYear - 1;
-  const currentRows = rows.filter(
+  const optionRows = rows.filter(
+    (row) =>
+      row.orderDate.getFullYear() === currentYear ||
+      row.orderDate.getFullYear() === priorYear,
+  );
+  const scopedRows = optionRows.filter(
+    (row) =>
+      !parsedFilters.customerName ||
+      row.customerName === parsedFilters.customerName,
+  );
+  const currentRows = scopedRows.filter(
     (row) => row.orderDate.getFullYear() === currentYear,
   );
   const currentMonths = new Set(
@@ -70,7 +88,7 @@ export function summarizeProductYoYRowsForTest(
   const priorQuantityBySku = new Map<string, number>();
   const descriptions = new Map<string, string>();
 
-  for (const row of rows) {
+  for (const row of scopedRows) {
     const rowYear = row.orderDate.getFullYear();
     const rowMonth = row.orderDate.getMonth() + 1;
 
@@ -103,6 +121,9 @@ export function summarizeProductYoYRowsForTest(
     currentYear,
     priorYear,
     months,
+    filterOptions: {
+      customers: unique(optionRows.map((row) => row.customerName)),
+    },
     rows: [...skus]
       .map((sku) => {
         const currentQuantity = currentQuantityBySku.get(sku) ?? 0;
@@ -125,7 +146,12 @@ export function summarizeProductYoYRowsForTest(
 }
 
 function normalizeProductRows(
-  rows: Array<Pick<SalesRecord, "orderDate" | "sku" | "productName" | "quantity">>,
+  rows: Array<
+    Pick<
+      SalesRecord,
+      "orderDate" | "customerName" | "sku" | "productName" | "quantity"
+    >
+  >,
 ): ProductYoYSourceRow[] {
   return rows.map((row) => ({
     ...row,
@@ -153,6 +179,7 @@ export async function getProductYoYAnalytics(
     },
     select: {
       orderDate: true,
+      customerName: true,
       sku: true,
       productName: true,
       quantity: true,

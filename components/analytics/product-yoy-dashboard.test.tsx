@@ -11,6 +11,9 @@ function createProductYoYResponse() {
       currentYear: 2026,
       priorYear: 2025,
       months: [1, 2, 3, 4, 5, 6],
+      filterOptions: {
+        customers: ["Customer A", "Customer B"],
+      },
       rows: [
         {
           sku: "SKU-A",
@@ -71,6 +74,7 @@ describe("ProductYoYDashboard", () => {
     expect(screen.getByText("Qty Diff")).toBeVisible();
     expect(screen.getByText("Qty YoY %")).toBeVisible();
     expect(screen.getByText("Scope: 2026 YTD Jan-Jun")).toBeVisible();
+    expect(screen.getByLabelText("Customer")).toBeVisible();
 
     const firstSku = screen.getAllByTestId("product-yoy-sku")[0];
     expect(firstSku).toHaveTextContent("SKU-A");
@@ -98,5 +102,56 @@ describe("ProductYoYDashboard", () => {
     expect(screen.getByText("SKU-B")).toBeVisible();
     expect(screen.queryByText("SKU-A")).not.toBeInTheDocument();
     expect(screen.queryByText("SKU-C")).not.toBeInTheDocument();
+  });
+
+  test("reloads item YoY for the selected customer", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => createProductYoYResponse(),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          analytics: {
+            currentYear: 2026,
+            priorYear: 2025,
+            months: [1, 2, 3, 4, 5, 6],
+            filterOptions: {
+              customers: ["Customer A", "Customer B"],
+            },
+            rows: [
+              {
+                sku: "SKU-A",
+                description: "Alpha tire",
+                currentQuantity: 25,
+                priorQuantity: 10,
+                quantityDiff: 15,
+                quantityGrowth: 1.5,
+              },
+            ],
+          },
+        }),
+      });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ProductYoYDashboard />);
+
+    await screen.findByText("SKU-A");
+    fireEvent.change(screen.getByLabelText("Customer"), {
+      target: { value: "Customer B" },
+    });
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/analytics/product-yoy?customerName=Customer+B",
+        expect.objectContaining({ cache: "no-store" }),
+      ),
+    );
+
+    expect(await screen.findByText("Scope: 2026 YTD Jan-Jun · Customer: Customer B")).toBeVisible();
+    expect(screen.getByText("25")).toBeVisible();
+    expect(screen.getByText("10")).toBeVisible();
   });
 });
