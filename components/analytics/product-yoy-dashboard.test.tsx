@@ -91,6 +91,7 @@ describe("ProductYoYDashboard", () => {
     expect(screen.getByText("-6.3%")).toBeVisible();
     expect(screen.getByText("Sales YoY")).toBeVisible();
     expect(screen.getByText("40.6%")).toBeVisible();
+    expect(screen.getByText("Line Item")).toBeVisible();
     expect(screen.getByText("SKU / Item")).toBeVisible();
     expect(screen.getByText("Description")).toBeVisible();
     expect(screen.getByText("2026 Qty")).toBeVisible();
@@ -100,6 +101,7 @@ describe("ProductYoYDashboard", () => {
     expect(screen.getByText("Scope: 2026 YTD Jan-Jun")).toBeVisible();
     expect(screen.getByLabelText("Customer")).toBeVisible();
 
+    expect(screen.getAllByTestId("product-yoy-line-item")[0]).toHaveTextContent("1");
     const firstSku = screen.getAllByTestId("product-yoy-sku")[0];
     expect(firstSku).toHaveTextContent("SKU-A");
     expect(screen.getByText("25%")).toBeVisible();

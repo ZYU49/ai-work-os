@@ -300,6 +300,9 @@ export function ProductYoYDashboard() {
               <thead className="bg-zinc-50 text-left text-xs font-semibold uppercase text-zinc-500">
                 <tr>
                   <th scope="col" className="px-4 py-3">
+                    Line Item
+                  </th>
+                  <th scope="col" className="px-4 py-3">
                     SKU / Item
                   </th>
                   <th scope="col" className="px-4 py-3">
@@ -320,8 +323,14 @@ export function ProductYoYDashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-100">
-                {rows.map((row) => (
+                {rows.map((row, index) => (
                   <tr key={row.sku} className="hover:bg-zinc-50">
+                    <td
+                      data-testid="product-yoy-line-item"
+                      className="whitespace-nowrap px-4 py-3 font-medium text-zinc-500"
+                    >
+                      {number(index + 1)}
+                    </td>
                     <td
                       data-testid="product-yoy-sku"
                       className="whitespace-nowrap px-4 py-3 font-medium text-zinc-950"
