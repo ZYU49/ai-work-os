@@ -29,11 +29,7 @@ export async function POST(request: Request) {
   const password = formData.get("password");
   const nextPath = safeNextPath(formData.get("next"));
   const configuredUsername = process.env.APP_ACCESS_USERNAME || "allen";
-  const configuredPassword = process.env.APP_ACCESS_PASSWORD;
-
-  if (!configuredPassword) {
-    return NextResponse.redirect(new URL(nextPath, request.url));
-  }
+  const configuredPassword = process.env.APP_ACCESS_PASSWORD || "1234";
 
   if (username !== configuredUsername || password !== configuredPassword) {
     return NextResponse.redirect(loginUrl(request, nextPath, true));

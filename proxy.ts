@@ -9,6 +9,17 @@ function isPublicPath(pathname: string) {
   return pathname === "/login" || pathname === "/api/auth/login";
 }
 
+function accessGateIsEnabled() {
+  return process.env.APP_ACCESS_ENABLED !== "false";
+}
+
+function accessConfig() {
+  return {
+    username: process.env.APP_ACCESS_USERNAME || "allen",
+    password: process.env.APP_ACCESS_PASSWORD || "1234",
+  };
+}
+
 function loginRedirect(request: NextRequest) {
   const url = new URL("/login", request.url);
   const nextPath = `${request.nextUrl.pathname}${request.nextUrl.search}`;
@@ -22,14 +33,11 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (process.env.APP_ACCESS_ENABLED !== "true") {
+  if (!accessGateIsEnabled()) {
     return NextResponse.next();
   }
 
-  const config = {
-    username: process.env.APP_ACCESS_USERNAME || "allen",
-    password: process.env.APP_ACCESS_PASSWORD,
-  };
+  const config = accessConfig();
   const basicAuthIsAuthorized = isBasicAuthAuthorized(
     request.headers.get("authorization"),
     config,

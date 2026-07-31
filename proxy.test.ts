@@ -3,6 +3,7 @@ import { afterEach, describe, expect, test } from "vitest";
 import { proxy } from "@/proxy";
 
 const originalAccessEnabled = process.env.APP_ACCESS_ENABLED;
+const originalAccessUsername = process.env.APP_ACCESS_USERNAME;
 const originalAccessPassword = process.env.APP_ACCESS_PASSWORD;
 
 function request(pathname: string) {
@@ -22,11 +23,28 @@ describe("proxy auth gate", () => {
     } else {
       process.env.APP_ACCESS_PASSWORD = originalAccessPassword;
     }
+
+    if (originalAccessUsername === undefined) {
+      delete process.env.APP_ACCESS_USERNAME;
+    } else {
+      process.env.APP_ACCESS_USERNAME = originalAccessUsername;
+    }
   });
 
-  test("allows pages without credentials when access gate is not explicitly enabled", async () => {
+  test("redirects protected pages to login by default", async () => {
     delete process.env.APP_ACCESS_ENABLED;
-    process.env.APP_ACCESS_PASSWORD = "1234";
+    delete process.env.APP_ACCESS_PASSWORD;
+
+    const response = await proxy(request("/analytics"));
+
+    expect(response.headers.get("location")).toBe(
+      "https://salesdesk.test/login?next=%2Fanalytics",
+    );
+  });
+
+  test("allows protected pages when access gate is explicitly disabled", async () => {
+    process.env.APP_ACCESS_ENABLED = "false";
+    delete process.env.APP_ACCESS_PASSWORD;
 
     const response = await proxy(request("/analytics"));
 
@@ -34,14 +52,29 @@ describe("proxy auth gate", () => {
     expect(response.headers.get("x-middleware-next")).toBe("1");
   });
 
-  test("redirects pages to login when access gate is explicitly enabled", async () => {
-    process.env.APP_ACCESS_ENABLED = "true";
-    process.env.APP_ACCESS_PASSWORD = "1234";
+  test("leaves login and auth routes public", async () => {
+    delete process.env.APP_ACCESS_ENABLED;
+    delete process.env.APP_ACCESS_PASSWORD;
 
-    const response = await proxy(request("/analytics"));
-
-    expect(response.headers.get("location")).toBe(
-      "https://salesdesk.test/login?next=%2Fanalytics",
+    await expect(proxy(request("/login"))).resolves.toHaveProperty(
+      "headers",
+      expect.objectContaining({
+        get: expect.any(Function),
+      }),
     );
+    expect((await proxy(request("/login"))).headers.get("location")).toBeNull();
+    expect((await proxy(request("/api/auth/login"))).headers.get("location")).toBeNull();
+  });
+
+  test("returns json auth errors for protected api routes", async () => {
+    delete process.env.APP_ACCESS_ENABLED;
+    delete process.env.APP_ACCESS_PASSWORD;
+
+    const response = await proxy(request("/api/analytics/product-yoy"));
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toEqual({
+      error: "Authentication required.",
+    });
   });
 });
