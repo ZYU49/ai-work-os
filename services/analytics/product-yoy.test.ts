@@ -76,6 +76,7 @@ describe("product YoY analytics", () => {
       priorRevenue: 1600,
       revenueDiff: 14150,
       revenueGrowth: 8.84375,
+      lineItemCount: 3,
       newItemCount: 1,
       lostItemCount: 1,
     });
@@ -129,6 +130,7 @@ describe("product YoY analytics", () => {
       priorRevenue: 1600,
       revenueDiff: 650,
       revenueGrowth: 0.40625,
+      lineItemCount: 3,
     });
     expect(summary.filterOptions.customers).toEqual(["Customer A", "Customer B"]);
   });

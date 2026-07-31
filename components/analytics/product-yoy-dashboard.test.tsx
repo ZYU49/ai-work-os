@@ -20,6 +20,7 @@ function createProductYoYResponse() {
         priorRevenue: 1600,
         revenueDiff: 650,
         revenueGrowth: 0.40625,
+        lineItemCount: 3,
         newItemCount: 1,
         lostItemCount: 1,
       },
@@ -80,7 +81,8 @@ describe("ProductYoYDashboard", () => {
 
     expect(await screen.findByText("Product YoY Performance")).toBeVisible();
     expect(screen.getByText("Overall Summary")).toBeVisible();
-    expect(screen.getByText("Item Detail")).toBeVisible();
+    expect(screen.getByText("Line Items")).toBeVisible();
+    expect(screen.getByText("Item Detail · 3 line items")).toBeVisible();
     expect(screen.getByText("2026 YTD Qty")).toBeVisible();
     expect(screen.getByText("150")).toBeVisible();
     expect(screen.getByText("2025 YTD Qty")).toBeVisible();
@@ -149,6 +151,7 @@ describe("ProductYoYDashboard", () => {
               priorRevenue: 100,
               revenueDiff: 150,
               revenueGrowth: 1.5,
+              lineItemCount: 1,
               newItemCount: 0,
               lostItemCount: 0,
             },

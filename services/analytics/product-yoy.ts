@@ -30,6 +30,7 @@ type ProductYoYSummary = {
   priorRevenue: number;
   revenueDiff: number;
   revenueGrowth: number | null;
+  lineItemCount: number;
   newItemCount: number;
   lostItemCount: number;
 };
@@ -181,6 +182,7 @@ export function summarizeProductYoYRowsForTest(
       priorRevenue,
       revenueDiff: currentRevenue - priorRevenue,
       revenueGrowth: calculateGrowth(currentRevenue, priorRevenue),
+      lineItemCount: outputRows.length,
       newItemCount: outputRows.filter(
         (row) => row.currentQuantity > 0 && row.priorQuantity === 0,
       ).length,

@@ -21,6 +21,7 @@ type ProductYoYSummary = {
   priorRevenue: number;
   revenueDiff: number;
   revenueGrowth: number | null;
+  lineItemCount: number;
   newItemCount: number;
   lostItemCount: number;
 };
@@ -248,6 +249,11 @@ export function ProductYoYDashboard() {
               </h3>
               <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <SummaryMetric
+                  label="Line Items"
+                  value={number(analytics.summary.lineItemCount)}
+                  detail="SKU rows in item detail"
+                />
+                <SummaryMetric
                   label={`${analytics.currentYear} YTD Qty`}
                   value={number(analytics.summary.currentQuantity)}
                 />
@@ -285,7 +291,9 @@ export function ProductYoYDashboard() {
               </div>
             </div>
             <div className="border-b border-zinc-100 px-4 py-3">
-              <h3 className="text-sm font-semibold text-zinc-950">Item Detail</h3>
+              <h3 className="text-sm font-semibold text-zinc-950">
+                Item Detail · {number(analytics.summary.lineItemCount)} line items
+              </h3>
             </div>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-zinc-100 text-sm">
