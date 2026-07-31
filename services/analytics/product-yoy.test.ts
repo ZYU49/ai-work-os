@@ -8,6 +8,7 @@ const rows = [
     sku: "SKU-A",
     productName: "Alpha tire",
     quantity: 60,
+    revenue: 600,
   },
   {
     orderDate: new Date("2025-02-12"),
@@ -15,6 +16,7 @@ const rows = [
     sku: "SKU-A",
     productName: "Alpha tire",
     quantity: 20,
+    revenue: 200,
   },
   {
     orderDate: new Date("2025-03-12"),
@@ -22,6 +24,7 @@ const rows = [
     sku: "SKU-A",
     productName: "Alpha tire",
     quantity: 999,
+    revenue: 9990,
   },
   {
     orderDate: new Date("2025-01-15"),
@@ -29,6 +32,7 @@ const rows = [
     sku: "SKU-C",
     productName: "Charlie tire",
     quantity: 80,
+    revenue: 800,
   },
   {
     orderDate: new Date("2026-01-10"),
@@ -36,6 +40,7 @@ const rows = [
     sku: "SKU-A",
     productName: "Alpha tire updated",
     quantity: 100,
+    revenue: 1500,
   },
   {
     orderDate: new Date("2026-02-10"),
@@ -43,6 +48,7 @@ const rows = [
     sku: "SKU-B",
     productName: "Bravo tire",
     quantity: 50,
+    revenue: 750,
   },
   {
     orderDate: new Date("2026-01-10"),
@@ -50,6 +56,7 @@ const rows = [
     sku: "SKU-A",
     productName: "Alpha tire updated",
     quantity: 900,
+    revenue: 13500,
   },
 ];
 
@@ -60,6 +67,18 @@ describe("product YoY analytics", () => {
     expect(summary.currentYear).toBe(2026);
     expect(summary.priorYear).toBe(2025);
     expect(summary.months).toEqual([1, 2]);
+    expect(summary.summary).toEqual({
+      currentQuantity: 1050,
+      priorQuantity: 160,
+      quantityDiff: 890,
+      quantityGrowth: 5.5625,
+      currentRevenue: 15750,
+      priorRevenue: 1600,
+      revenueDiff: 14150,
+      revenueGrowth: 8.84375,
+      newItemCount: 1,
+      lostItemCount: 1,
+    });
     expect(summary.rows).toEqual([
       {
         sku: "SKU-A",
@@ -100,6 +119,16 @@ describe("product YoY analytics", () => {
       priorQuantity: 80,
       quantityDiff: 20,
       quantityGrowth: 0.25,
+    });
+    expect(summary.summary).toMatchObject({
+      currentQuantity: 150,
+      priorQuantity: 160,
+      quantityDiff: -10,
+      quantityGrowth: -0.0625,
+      currentRevenue: 2250,
+      priorRevenue: 1600,
+      revenueDiff: 650,
+      revenueGrowth: 0.40625,
     });
     expect(summary.filterOptions.customers).toEqual(["Customer A", "Customer B"]);
   });

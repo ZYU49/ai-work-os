@@ -9,6 +9,7 @@ type ProductYoYSourceRow = Pick<
   "orderDate" | "customerName" | "sku" | "productName"
 > & {
   quantity: number;
+  revenue: number;
 };
 
 export type ProductYoYRow = {
@@ -20,10 +21,24 @@ export type ProductYoYRow = {
   quantityGrowth: number | null;
 };
 
+type ProductYoYSummary = {
+  currentQuantity: number;
+  priorQuantity: number;
+  quantityDiff: number;
+  quantityGrowth: number | null;
+  currentRevenue: number;
+  priorRevenue: number;
+  revenueDiff: number;
+  revenueGrowth: number | null;
+  newItemCount: number;
+  lostItemCount: number;
+};
+
 export type ProductYoYOverview = {
   currentYear: number;
   priorYear: number;
   months: number[];
+  summary: ProductYoYSummary;
   rows: ProductYoYRow[];
   filterOptions: {
     customers: string[];
@@ -86,6 +101,8 @@ export function summarizeProductYoYRowsForTest(
   const allowedMonths = new Set(months);
   const currentQuantityBySku = new Map<string, number>();
   const priorQuantityBySku = new Map<string, number>();
+  const currentRevenueBySku = new Map<string, number>();
+  const priorRevenueBySku = new Map<string, number>();
   const descriptions = new Map<string, string>();
 
   for (const row of scopedRows) {
@@ -107,8 +124,10 @@ export function summarizeProductYoYRowsForTest(
 
     if (rowYear === currentYear) {
       addQuantity(currentQuantityBySku, row.sku, row.quantity);
+      addQuantity(currentRevenueBySku, row.sku, row.revenue);
     } else {
       addQuantity(priorQuantityBySku, row.sku, row.quantity);
+      addQuantity(priorRevenueBySku, row.sku, row.revenue);
     }
   }
 
@@ -117,31 +136,62 @@ export function summarizeProductYoYRowsForTest(
     ...priorQuantityBySku.keys(),
   ]);
 
+  const outputRows = [...skus]
+    .map((sku) => {
+      const currentQuantity = currentQuantityBySku.get(sku) ?? 0;
+      const priorQuantity = priorQuantityBySku.get(sku) ?? 0;
+
+      return {
+        sku,
+        description: descriptions.get(sku) ?? "",
+        currentQuantity,
+        priorQuantity,
+        quantityDiff: currentQuantity - priorQuantity,
+        quantityGrowth: calculateGrowth(currentQuantity, priorQuantity),
+      };
+    })
+    .sort(
+      (a, b) =>
+        b.currentQuantity - a.currentQuantity || a.sku.localeCompare(b.sku),
+    );
+  const currentQuantity = outputRows.reduce(
+    (sum, row) => sum + row.currentQuantity,
+    0,
+  );
+  const priorQuantity = outputRows.reduce((sum, row) => sum + row.priorQuantity, 0);
+  const currentRevenue = [...currentRevenueBySku.values()].reduce(
+    (sum, value) => sum + value,
+    0,
+  );
+  const priorRevenue = [...priorRevenueBySku.values()].reduce(
+    (sum, value) => sum + value,
+    0,
+  );
+
   return {
     currentYear,
     priorYear,
     months,
+    summary: {
+      currentQuantity,
+      priorQuantity,
+      quantityDiff: currentQuantity - priorQuantity,
+      quantityGrowth: calculateGrowth(currentQuantity, priorQuantity),
+      currentRevenue,
+      priorRevenue,
+      revenueDiff: currentRevenue - priorRevenue,
+      revenueGrowth: calculateGrowth(currentRevenue, priorRevenue),
+      newItemCount: outputRows.filter(
+        (row) => row.currentQuantity > 0 && row.priorQuantity === 0,
+      ).length,
+      lostItemCount: outputRows.filter(
+        (row) => row.currentQuantity === 0 && row.priorQuantity > 0,
+      ).length,
+    },
     filterOptions: {
       customers: unique(optionRows.map((row) => row.customerName)),
     },
-    rows: [...skus]
-      .map((sku) => {
-        const currentQuantity = currentQuantityBySku.get(sku) ?? 0;
-        const priorQuantity = priorQuantityBySku.get(sku) ?? 0;
-
-        return {
-          sku,
-          description: descriptions.get(sku) ?? "",
-          currentQuantity,
-          priorQuantity,
-          quantityDiff: currentQuantity - priorQuantity,
-          quantityGrowth: calculateGrowth(currentQuantity, priorQuantity),
-        };
-      })
-      .sort(
-        (a, b) =>
-          b.currentQuantity - a.currentQuantity || a.sku.localeCompare(b.sku),
-      ),
+    rows: outputRows,
   };
 }
 
@@ -150,12 +200,14 @@ function normalizeProductRows(
     Pick<
       SalesRecord,
       "orderDate" | "customerName" | "sku" | "productName" | "quantity"
+      | "revenue"
     >
   >,
 ): ProductYoYSourceRow[] {
   return rows.map((row) => ({
     ...row,
     quantity: Number(row.quantity),
+    revenue: Number(row.revenue),
   }));
 }
 
@@ -183,6 +235,7 @@ export async function getProductYoYAnalytics(
       sku: true,
       productName: true,
       quantity: true,
+      revenue: true,
     },
   });
 

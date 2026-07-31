@@ -11,6 +11,18 @@ function createProductYoYResponse() {
       currentYear: 2026,
       priorYear: 2025,
       months: [1, 2, 3, 4, 5, 6],
+      summary: {
+        currentQuantity: 150,
+        priorQuantity: 160,
+        quantityDiff: -10,
+        quantityGrowth: -0.0625,
+        currentRevenue: 2250,
+        priorRevenue: 1600,
+        revenueDiff: 650,
+        revenueGrowth: 0.40625,
+        newItemCount: 1,
+        lostItemCount: 1,
+      },
       filterOptions: {
         customers: ["Customer A", "Customer B"],
       },
@@ -67,11 +79,21 @@ describe("ProductYoYDashboard", () => {
     );
 
     expect(await screen.findByText("Product YoY Performance")).toBeVisible();
+    expect(screen.getByText("Overall Summary")).toBeVisible();
+    expect(screen.getByText("Item Detail")).toBeVisible();
+    expect(screen.getByText("2026 YTD Qty")).toBeVisible();
+    expect(screen.getByText("150")).toBeVisible();
+    expect(screen.getByText("2025 YTD Qty")).toBeVisible();
+    expect(screen.getByText("160")).toBeVisible();
+    expect(screen.getByText("Qty YoY")).toBeVisible();
+    expect(screen.getByText("-6.3%")).toBeVisible();
+    expect(screen.getByText("Sales YoY")).toBeVisible();
+    expect(screen.getByText("40.6%")).toBeVisible();
     expect(screen.getByText("SKU / Item")).toBeVisible();
     expect(screen.getByText("Description")).toBeVisible();
     expect(screen.getByText("2026 Qty")).toBeVisible();
     expect(screen.getByText("2025 Qty")).toBeVisible();
-    expect(screen.getByText("Qty Diff")).toBeVisible();
+    expect(screen.getAllByText("Qty Diff").length).toBeGreaterThan(0);
     expect(screen.getByText("Qty YoY %")).toBeVisible();
     expect(screen.getByText("Scope: 2026 YTD Jan-Jun")).toBeVisible();
     expect(screen.getByLabelText("Customer")).toBeVisible();
@@ -118,6 +140,18 @@ describe("ProductYoYDashboard", () => {
             currentYear: 2026,
             priorYear: 2025,
             months: [1, 2, 3, 4, 5, 6],
+            summary: {
+              currentQuantity: 25,
+              priorQuantity: 10,
+              quantityDiff: 15,
+              quantityGrowth: 1.5,
+              currentRevenue: 250,
+              priorRevenue: 100,
+              revenueDiff: 150,
+              revenueGrowth: 1.5,
+              newItemCount: 0,
+              lostItemCount: 0,
+            },
             filterOptions: {
               customers: ["Customer A", "Customer B"],
             },
@@ -151,7 +185,7 @@ describe("ProductYoYDashboard", () => {
     );
 
     expect(await screen.findByText("Scope: 2026 YTD Jan-Jun · Customer: Customer B")).toBeVisible();
-    expect(screen.getByText("25")).toBeVisible();
-    expect(screen.getByText("10")).toBeVisible();
+    expect(screen.getAllByText("25").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("10").length).toBeGreaterThan(0);
   });
 });
