@@ -109,4 +109,25 @@ describe("basic auth", () => {
       ),
     ).resolves.toBe(false);
   });
+
+  test("expires cookie session tokens after one day", async () => {
+    const token = await createAuthSessionToken(
+      {
+        username: "allen",
+        password: "1234",
+      },
+      new Date("2026-01-01T00:00:00.000Z"),
+    );
+
+    await expect(
+      verifyAuthSessionToken(
+        token,
+        {
+          username: "allen",
+          password: "1234",
+        },
+        new Date("2026-01-02T00:00:01.000Z"),
+      ),
+    ).resolves.toBe(false);
+  });
 });

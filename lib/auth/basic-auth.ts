@@ -4,7 +4,7 @@ export type BasicAuthConfig = {
 };
 
 export const AUTH_SESSION_COOKIE = "ai_work_os_session";
-const AUTH_SESSION_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 30;
+const AUTH_SESSION_MAX_AGE_MS = 1000 * 60 * 60 * 24;
 
 export function buildBasicAuthChallenge(realm: string) {
   return `Basic realm="${realm}", charset="UTF-8"`;
