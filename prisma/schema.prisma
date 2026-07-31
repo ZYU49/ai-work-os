@@ -234,8 +234,8 @@ model SalesRecord {
   shipToCode     String?
   memberName     String?
   quantity       Decimal     @db.Decimal(18, 4)
-  revenue        Decimal     @db.Decimal(18, 4)
-  unitPrice      Decimal?    @db.Decimal(18, 4)
+  revenue        Decimal     @db.Decimal(18, 8)
+  unitPrice      Decimal?    @db.Decimal(18, 8)
   createdAt      DateTime    @default(now())
   import         SalesImport @relation(fields: [importId], references: [id], onDelete: Cascade)
 

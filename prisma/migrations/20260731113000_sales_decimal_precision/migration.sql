@@ -1,0 +1,2 @@
+ALTER TABLE "SalesRecord" ALTER COLUMN "revenue" TYPE DECIMAL(18, 8);
+ALTER TABLE "SalesRecord" ALTER COLUMN "unitPrice" TYPE DECIMAL(18, 8);
