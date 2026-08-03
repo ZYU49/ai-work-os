@@ -3,6 +3,7 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import {
   addBriefing,
+  defaultBriefing,
   readBriefings,
   SALES_DESK_BRIEFING_STORAGE_KEY,
 } from "@/services/briefing/local-store";
@@ -60,5 +61,17 @@ describe("briefing local store", () => {
     expect(localStorage.getItem(SALES_DESK_BRIEFING_STORAGE_KEY)).toContain(
       "Warehouse overdue updated",
     );
+  });
+
+  test("announces the latest uploaded sales data by default", () => {
+    const briefing = defaultBriefing(new Date("2026-08-03T10:00:00.000Z"));
+
+    expect(briefing).toMatchObject({
+      kind: "sales",
+      title: "Sales data uploaded",
+      message:
+        "New Jan-Jul sales data has been uploaded. Sales Analytics and Product YoY are ready to review.",
+      href: "/analytics",
+    });
   });
 });

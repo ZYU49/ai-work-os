@@ -28,17 +28,14 @@ function createId(input: AddBriefingInput) {
 }
 
 export function defaultBriefing(now = new Date()): BriefingEvent {
-  const date = new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-  }).format(now);
-
   return {
     id: "system-default-briefing",
-    kind: "system",
-    title: "SalesDesk Briefing",
-    message: `Today is ${date}. Upload monthly sales, Midstate, or warehouse reports to see fresh updates here.`,
+    kind: "sales",
+    title: "Sales data uploaded",
+    message:
+      "New Jan-Jul sales data has been uploaded. Sales Analytics and Product YoY are ready to review.",
     createdAt: now.toISOString(),
+    href: "/analytics",
   };
 }
 
