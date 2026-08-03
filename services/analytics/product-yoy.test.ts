@@ -1,5 +1,18 @@
-import { describe, expect, it } from "vitest";
-import { summarizeProductYoYRowsForTest } from "@/services/analytics/product-yoy";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  getProductYoYAnalytics,
+  summarizeProductYoYRowsForTest,
+} from "@/services/analytics/product-yoy";
+
+const findManyMock = vi.fn();
+
+vi.mock("@/lib/db", () => ({
+  prisma: {
+    salesRecord: {
+      findMany: findManyMock,
+    },
+  },
+}));
 
 const rows = [
   {
@@ -61,6 +74,10 @@ const rows = [
 ];
 
 describe("product YoY analytics", () => {
+  beforeEach(() => {
+    findManyMock.mockReset();
+  });
+
   it("compares each SKU against matching prior-year months and sorts by current-year quantity", () => {
     const summary = summarizeProductYoYRowsForTest(rows, { year: 2026 });
 
@@ -131,6 +148,23 @@ describe("product YoY analytics", () => {
       revenueDiff: 650,
       revenueGrowth: 0.40625,
       lineItemCount: 3,
+    });
+    expect(summary.filterOptions.customers).toEqual(["Customer A", "Customer B"]);
+  });
+
+  it("keeps all customer filter options when item YoY is scoped to one customer", async () => {
+    findManyMock
+      .mockResolvedValueOnce(rows.filter((row) => row.customerName === "Customer A"))
+      .mockResolvedValueOnce(rows);
+
+    const summary = await getProductYoYAnalytics({
+      year: 2026,
+      customerName: "Customer A",
+    });
+
+    expect(summary.rows.find((row) => row.sku === "SKU-A")).toMatchObject({
+      currentQuantity: 100,
+      priorQuantity: 80,
     });
     expect(summary.filterOptions.customers).toEqual(["Customer A", "Customer B"]);
   });

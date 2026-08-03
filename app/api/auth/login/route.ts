@@ -4,6 +4,8 @@ import {
   createAuthSessionToken,
 } from "@/lib/auth/basic-auth";
 
+const FORM_REDIRECT_STATUS = 303;
+
 function safeNextPath(value: FormDataEntryValue | null) {
   if (typeof value !== "string" || !value.startsWith("/") || value.startsWith("//")) {
     return "/dashboard";
@@ -32,10 +34,16 @@ export async function POST(request: Request) {
   const configuredPassword = process.env.APP_ACCESS_PASSWORD || "1234";
 
   if (username !== configuredUsername || password !== configuredPassword) {
-    return NextResponse.redirect(loginUrl(request, nextPath, true));
+    return NextResponse.redirect(
+      loginUrl(request, nextPath, true),
+      FORM_REDIRECT_STATUS,
+    );
   }
 
-  const response = NextResponse.redirect(new URL(nextPath, request.url));
+  const response = NextResponse.redirect(
+    new URL(nextPath, request.url),
+    FORM_REDIRECT_STATUS,
+  );
   const token = await createAuthSessionToken({
     username: configuredUsername,
     password: configuredPassword,

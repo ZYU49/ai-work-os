@@ -70,20 +70,27 @@ function unique(values: Array<string | null | undefined>) {
 export function summarizeProductYoYRowsForTest(
   rows: ProductYoYSourceRow[],
   filters: SalesAnalyticsFilters,
+  filterOptionRows: ProductYoYSourceRow[] = rows,
 ): ProductYoYOverview {
   const parsedFilters = salesAnalyticsFiltersSchema.parse(filters);
   const currentYear = parsedFilters.year ?? new Date().getFullYear();
   const priorYear = currentYear - 1;
-  const optionRows = rows.filter(
+  const optionRows = filterOptionRows.filter(
     (row) =>
       row.orderDate.getFullYear() === currentYear ||
       row.orderDate.getFullYear() === priorYear,
   );
-  const scopedRows = optionRows.filter(
+  const scopedRows = rows
+    .filter(
+      (row) =>
+        row.orderDate.getFullYear() === currentYear ||
+        row.orderDate.getFullYear() === priorYear,
+    )
+    .filter(
     (row) =>
       !parsedFilters.customerName ||
       row.customerName === parsedFilters.customerName,
-  );
+    );
   const currentRows = scopedRows.filter(
     (row) => row.orderDate.getFullYear() === currentYear,
   );
@@ -218,31 +225,53 @@ export async function getProductYoYAnalytics(
 ): Promise<ProductYoYOverview> {
   const year = filters.year ?? new Date().getFullYear();
   const { prisma } = await import("@/lib/db");
-  const rows = await prisma.salesRecord.findMany({
-    where: {
+  const dateWhere = {
+    gte: new Date(year - 1, 0, 1),
+    lt: new Date(year + 1, 0, 1),
+  };
+  const select = {
+    orderDate: true,
+    customerName: true,
+    sku: true,
+    productName: true,
+    quantity: true,
+    revenue: true,
+  } as const;
+  const [rows, filterOptionRows] = await Promise.all([
+    prisma.salesRecord.findMany({
+      where: {
+        orderDate: dateWhere,
+        ...(filters.salesperson ? { salesperson: filters.salesperson } : {}),
+        ...(filters.customerName ? { customerName: filters.customerName } : {}),
+        ...(filters.category ? { category: filters.category } : {}),
+        ...(filters.sku ? { sku: filters.sku } : {}),
+        ...(filters.shipToState ? { shipToState: filters.shipToState } : {}),
+        ...(filters.memberName ? { memberName: filters.memberName } : {}),
+      },
+      select,
+    }),
+    prisma.salesRecord.findMany({
+      where: {
       orderDate: {
-        gte: new Date(year - 1, 0, 1),
-        lt: new Date(year + 1, 0, 1),
+          gte: new Date(year - 1, 0, 1),
+          lt: new Date(year + 1, 0, 1),
       },
       ...(filters.salesperson ? { salesperson: filters.salesperson } : {}),
-      ...(filters.customerName ? { customerName: filters.customerName } : {}),
       ...(filters.category ? { category: filters.category } : {}),
       ...(filters.sku ? { sku: filters.sku } : {}),
       ...(filters.shipToState ? { shipToState: filters.shipToState } : {}),
       ...(filters.memberName ? { memberName: filters.memberName } : {}),
     },
-    select: {
-      orderDate: true,
-      customerName: true,
-      sku: true,
-      productName: true,
-      quantity: true,
-      revenue: true,
-    },
-  });
+      select,
+    }),
+  ]);
 
-  return summarizeProductYoYRowsForTest(normalizeProductRows(rows), {
-    ...filters,
-    year,
-  });
+  return summarizeProductYoYRowsForTest(
+    normalizeProductRows(rows),
+    {
+      ...filters,
+      year,
+    },
+    normalizeProductRows(filterOptionRows),
+  );
 }
