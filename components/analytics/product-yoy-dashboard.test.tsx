@@ -106,7 +106,7 @@ describe("ProductYoYDashboard", () => {
     expect(firstSku).toHaveTextContent("SKU-A");
     expect(screen.getByText("25%")).toBeVisible();
     expect(screen.getByText("N/A")).toBeVisible();
-    expect(screen.getByText("-100%")).toBeVisible();
+    expect(screen.getByText("-100%")).toHaveClass("text-red-600");
   });
 
   test("filters products by SKU or description", async () => {

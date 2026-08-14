@@ -75,6 +75,10 @@ function percent(value: number | null) {
   }).format(value);
 }
 
+function quantityGrowthClassName(value: number | null) {
+  return value !== null && value < 0 ? "text-red-600" : "text-zinc-950";
+}
+
 function scopeLabel(analytics: ProductYoYAnalytics, customerName: string) {
   const months = analytics.months;
   const customerScope = customerName ? ` · Customer: ${customerName}` : "";
@@ -349,7 +353,11 @@ export function ProductYoYDashboard() {
                     <td className="whitespace-nowrap px-4 py-3 text-right text-zinc-950">
                       {number(row.quantityDiff)}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-right text-zinc-950">
+                    <td
+                      className={`whitespace-nowrap px-4 py-3 text-right ${quantityGrowthClassName(
+                        row.quantityGrowth,
+                      )}`}
+                    >
                       {percent(row.quantityGrowth)}
                     </td>
                   </tr>
