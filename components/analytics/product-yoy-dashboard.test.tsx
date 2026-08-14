@@ -107,6 +107,9 @@ describe("ProductYoYDashboard", () => {
     expect(screen.getByText("25%")).toBeVisible();
     expect(screen.getByText("N/A")).toBeVisible();
     expect(screen.getByText("-100%")).toHaveClass("text-red-600");
+    expect(screen.getByText("Item Detail · 3 line items").parentElement).toContainElement(
+      screen.getByLabelText("Search products"),
+    );
   });
 
   test("filters products by SKU or description", async () => {

@@ -202,7 +202,7 @@ export function ProductYoYDashboard() {
                 : "Loading product YoY scope"}
             </p>
           </div>
-          <div className="grid w-full gap-3 sm:w-auto sm:grid-cols-[16rem_18rem]">
+          <div className="grid w-full gap-3 sm:w-64">
             <label className="flex min-w-0 flex-col gap-1 text-xs font-medium text-zinc-600">
               Customer
               <select
@@ -218,18 +218,6 @@ export function ProductYoYDashboard() {
                 ))}
               </select>
             </label>
-            <div>
-              <label htmlFor="product-yoy-search" className="sr-only">
-                Search products
-              </label>
-              <Input
-                id="product-yoy-search"
-                aria-label="Search products"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search SKU or description"
-              />
-            </div>
           </div>
         </div>
 
@@ -294,10 +282,22 @@ export function ProductYoYDashboard() {
                 />
               </div>
             </div>
-            <div className="border-b border-zinc-100 px-4 py-3">
+            <div className="flex flex-col gap-3 border-b border-zinc-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <h3 className="text-sm font-semibold text-zinc-950">
                 Item Detail · {number(analytics.summary.lineItemCount)} line items
               </h3>
+              <div className="w-full sm:w-80">
+                <label htmlFor="product-yoy-search" className="sr-only">
+                  Search products
+                </label>
+                <Input
+                  id="product-yoy-search"
+                  aria-label="Search products"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Search SKU or description"
+                />
+              </div>
             </div>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-zinc-100 text-sm">
