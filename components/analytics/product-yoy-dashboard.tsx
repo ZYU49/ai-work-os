@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Download } from "lucide-react";
+import { utils, writeFile } from "xlsx";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 type ProductYoYRow = {
@@ -79,6 +82,10 @@ function quantityGrowthClassName(value: number | null) {
   return value !== null && value < 0 ? "text-red-600" : "text-zinc-950";
 }
 
+function fileSafe(value: string) {
+  return value.replace(/[^a-z0-9]+/gi, "_").replace(/^_+|_+$/g, "") || "All_Customers";
+}
+
 function scopeLabel(analytics: ProductYoYAnalytics, customerName: string) {
   const months = analytics.months;
   const customerScope = customerName ? ` · Customer: ${customerName}` : "";
@@ -90,6 +97,19 @@ function scopeLabel(analytics: ProductYoYAnalytics, customerName: string) {
   return `Scope: ${analytics.currentYear} YTD ${monthNames[months[0] - 1]}-${
     monthNames[months[months.length - 1] - 1]
   }${customerScope}`;
+}
+
+function exportFileName(analytics: ProductYoYAnalytics, customerName: string) {
+  const months = analytics.months;
+  const customerScope = customerName ? fileSafe(customerName) : "All_Customers";
+
+  if (!months.length) {
+    return `Product_YoY_${customerScope}_${analytics.currentYear}_YTD.xlsx`;
+  }
+
+  return `Product_YoY_${customerScope}_${analytics.currentYear}_YTD_${
+    monthNames[months[0] - 1]
+  }-${monthNames[months[months.length - 1] - 1]}.xlsx`;
 }
 
 function SummaryMetric({
@@ -187,6 +207,28 @@ export function ProductYoYDashboard() {
         row.description.toLowerCase().includes(normalizedQuery),
     );
   }, [analytics?.rows, query]);
+
+  function exportVisibleRows() {
+    if (!analytics || !rows.length) {
+      return;
+    }
+
+    const worksheet = utils.json_to_sheet(
+      rows.map((row, index) => ({
+        "Line Item": index + 1,
+        "SKU / Item": row.sku,
+        Description: row.description || "-",
+        [`${analytics.currentYear} Qty`]: row.currentQuantity,
+        [`${analytics.priorYear} Qty`]: row.priorQuantity,
+        "Qty Diff": row.quantityDiff,
+        "Qty YoY %": percent(row.quantityGrowth),
+      })),
+    );
+    const workbook = utils.book_new();
+
+    utils.book_append_sheet(workbook, worksheet, "Product YoY");
+    writeFile(workbook, exportFileName(analytics, customerName));
+  }
 
   return (
     <div className="flex min-w-0 flex-col gap-4">
@@ -286,17 +328,28 @@ export function ProductYoYDashboard() {
               <h3 className="text-sm font-semibold text-zinc-950">
                 Item Detail · {number(analytics.summary.lineItemCount)} line items
               </h3>
-              <div className="w-full sm:w-80">
-                <label htmlFor="product-yoy-search" className="sr-only">
-                  Search products
-                </label>
-                <Input
-                  id="product-yoy-search"
-                  aria-label="Search products"
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Search SKU or description"
-                />
+              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                <div className="w-full sm:w-80">
+                  <label htmlFor="product-yoy-search" className="sr-only">
+                    Search products
+                  </label>
+                  <Input
+                    id="product-yoy-search"
+                    aria-label="Search products"
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder="Search SKU or description"
+                  />
+                </div>
+                <Button
+                  variant="secondary"
+                  onClick={exportVisibleRows}
+                  disabled={!rows.length}
+                  className="w-full sm:w-auto"
+                >
+                  <Download className="size-4" aria-hidden="true" />
+                  Export Excel
+                </Button>
               </div>
             </div>
             <div className="overflow-x-auto">

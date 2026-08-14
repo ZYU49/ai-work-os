@@ -5,6 +5,22 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { ProductYoYDashboard } from "@/components/analytics/product-yoy-dashboard";
 
+const xlsxMock = vi.hoisted(() => ({
+  bookAppendSheet: vi.fn(),
+  bookNew: vi.fn(() => ({ SheetNames: [], Sheets: {} })),
+  jsonToSheet: vi.fn(() => ({})),
+  writeFile: vi.fn(),
+}));
+
+vi.mock("xlsx", () => ({
+  utils: {
+    book_append_sheet: xlsxMock.bookAppendSheet,
+    book_new: xlsxMock.bookNew,
+    json_to_sheet: xlsxMock.jsonToSheet,
+  },
+  writeFile: xlsxMock.writeFile,
+}));
+
 function createProductYoYResponse() {
   return {
     analytics: {
@@ -60,6 +76,7 @@ function createProductYoYResponse() {
 describe("ProductYoYDashboard", () => {
   afterEach(() => {
     cleanup();
+    vi.clearAllMocks();
     vi.unstubAllGlobals();
   });
 
@@ -131,6 +148,45 @@ describe("ProductYoYDashboard", () => {
     expect(screen.getByText("SKU-B")).toBeVisible();
     expect(screen.queryByText("SKU-A")).not.toBeInTheDocument();
     expect(screen.queryByText("SKU-C")).not.toBeInTheDocument();
+  });
+
+  test("exports the visible item detail rows to Excel", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => createProductYoYResponse(),
+      }),
+    );
+
+    render(<ProductYoYDashboard />);
+
+    await screen.findByText("SKU-A");
+    fireEvent.change(screen.getByLabelText("Search products"), {
+      target: { value: "bravo" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Export Excel" }));
+
+    expect(xlsxMock.jsonToSheet).toHaveBeenCalledWith([
+      {
+        "Line Item": 1,
+        "SKU / Item": "SKU-B",
+        Description: "Bravo tire",
+        "2026 Qty": 50,
+        "2025 Qty": 0,
+        "Qty Diff": 50,
+        "Qty YoY %": "N/A",
+      },
+    ]);
+    expect(xlsxMock.bookAppendSheet).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      "Product YoY",
+    );
+    expect(xlsxMock.writeFile).toHaveBeenCalledWith(
+      expect.anything(),
+      "Product_YoY_All_Customers_2026_YTD_Jan-Jun.xlsx",
+    );
   });
 
   test("reloads item YoY for the selected customer", async () => {
