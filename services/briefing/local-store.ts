@@ -30,12 +30,12 @@ function createId(input: AddBriefingInput) {
 export function defaultBriefing(now = new Date()): BriefingEvent {
   return {
     id: "system-default-briefing",
-    kind: "sales",
-    title: "Sales data uploaded",
+    kind: "midstate",
+    title: "Midstate data uploaded",
     message:
-      "New Jan-Aug sales data has been uploaded. Sales Analytics and Product YoY are ready to review.",
+      "New July Midstate data has been uploaded. Rolling 12 months and member analytics are ready to review.",
     createdAt: now.toISOString(),
-    href: "/analytics",
+    href: "/analytics/midstate",
   };
 }
 

@@ -63,15 +63,15 @@ describe("briefing local store", () => {
     );
   });
 
-  test("announces the latest uploaded sales data by default", () => {
-    const briefing = defaultBriefing(new Date("2026-08-03T10:00:00.000Z"));
+  test("announces the latest uploaded Midstate data by default", () => {
+    const briefing = defaultBriefing(new Date("2026-09-01T10:00:00.000Z"));
 
     expect(briefing).toMatchObject({
-      kind: "sales",
-      title: "Sales data uploaded",
+      kind: "midstate",
+      title: "Midstate data uploaded",
       message:
-        "New Jan-Aug sales data has been uploaded. Sales Analytics and Product YoY are ready to review.",
-      href: "/analytics",
+        "New July Midstate data has been uploaded. Rolling 12 months and member analytics are ready to review.",
+      href: "/analytics/midstate",
     });
   });
 });
