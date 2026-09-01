@@ -33,7 +33,7 @@ export function defaultBriefing(now = new Date()): BriefingEvent {
     kind: "sales",
     title: "Sales data uploaded",
     message:
-      "New Jan-Jul sales data has been uploaded. Sales Analytics and Product YoY are ready to review.",
+      "New Jan-Aug sales data has been uploaded. Sales Analytics and Product YoY are ready to review.",
     createdAt: now.toISOString(),
     href: "/analytics",
   };
