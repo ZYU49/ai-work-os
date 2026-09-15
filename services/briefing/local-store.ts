@@ -33,7 +33,7 @@ export function defaultBriefing(now = new Date()): BriefingEvent {
     kind: "midstate",
     title: "Midstate data uploaded",
     message:
-      "New July Midstate data has been uploaded. Rolling 12 months and member analytics are ready to review.",
+      "New August Midstate data has been uploaded. Rolling 12 months and member analytics are ready to review.",
     createdAt: now.toISOString(),
     href: "/analytics/midstate",
   };
