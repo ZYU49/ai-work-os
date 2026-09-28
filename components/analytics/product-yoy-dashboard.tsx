@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Download } from "lucide-react";
 import { utils, writeFile } from "xlsx";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import type { SalesReportingPeriod } from "@/services/analytics/reporting-period";
 
 type ProductYoYRow = {
   sku: string;
@@ -33,6 +34,7 @@ type ProductYoYAnalytics = {
   currentYear: number;
   priorYear: number;
   months: number[];
+  period: SalesReportingPeriod;
   summary: ProductYoYSummary;
   filterOptions: {
     customers: string[];
@@ -86,30 +88,27 @@ function fileSafe(value: string) {
   return value.replace(/[^a-z0-9]+/gi, "_").replace(/^_+|_+$/g, "") || "All_Customers";
 }
 
+function periodLabel(period: SalesReportingPeriod) {
+  return period.kind === "ytd" ? "YTD" : period.kind === "month" ? "Month" : "Period";
+}
+
+function periodRange(period: SalesReportingPeriod) {
+  if (!period.months.length) return "";
+  const start = monthNames[period.startMonth - 1];
+  const end = monthNames[period.endMonth - 1];
+  return period.startMonth === period.endMonth ? start : `${start}-${end}`;
+}
+
 function scopeLabel(analytics: ProductYoYAnalytics, customerName: string) {
-  const months = analytics.months;
   const customerScope = customerName ? ` · Customer: ${customerName}` : "";
-
-  if (!months.length) {
-    return `Scope: ${analytics.currentYear} YTD${customerScope}`;
-  }
-
-  return `Scope: ${analytics.currentYear} YTD ${monthNames[months[0] - 1]}-${
-    monthNames[months[months.length - 1] - 1]
-  }${customerScope}`;
+  const range = periodRange(analytics.period);
+  return `Scope: ${analytics.currentYear} ${periodLabel(analytics.period)}${range ? ` ${range}` : ""}${customerScope}`;
 }
 
 function exportFileName(analytics: ProductYoYAnalytics, customerName: string) {
-  const months = analytics.months;
   const customerScope = customerName ? fileSafe(customerName) : "All_Customers";
-
-  if (!months.length) {
-    return `Product_YoY_${customerScope}_${analytics.currentYear}_YTD.xlsx`;
-  }
-
-  return `Product_YoY_${customerScope}_${analytics.currentYear}_YTD_${
-    monthNames[months[0] - 1]
-  }-${monthNames[months[months.length - 1] - 1]}.xlsx`;
+  const range = periodRange(analytics.period);
+  return `Product_YoY_${customerScope}_${analytics.currentYear}_${periodLabel(analytics.period)}${range ? `_${range}` : ""}.xlsx`;
 }
 
 function SummaryMetric({
@@ -135,12 +134,17 @@ function SummaryMetric({
 export function ProductYoYDashboard() {
   const [analytics, setAnalytics] = useState<ProductYoYAnalytics | null>(null);
   const [customerName, setCustomerName] = useState("");
+  const [resolvedCustomerName, setResolvedCustomerName] = useState("");
+  const [customers, setCustomers] = useState<string[]>([]);
   const [query, setQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const requestVersion = useRef(0);
 
   useEffect(() => {
     let isMounted = true;
+    const version = ++requestVersion.current;
+    const isLatestRequest = () => isMounted && version === requestVersion.current;
 
     async function loadProductYoY() {
       setError(null);
@@ -159,7 +163,7 @@ export function ProductYoYDashboard() {
         });
         const data = await response.json();
 
-        if (!isMounted) {
+        if (!isLatestRequest()) {
           return;
         }
 
@@ -168,8 +172,10 @@ export function ProductYoYDashboard() {
         }
 
         setAnalytics(data.analytics);
+        setResolvedCustomerName(customerName);
+        setCustomers(data.analytics.filterOptions.customers);
       } catch (loadError) {
-        if (!isMounted) {
+        if (!isLatestRequest()) {
           return;
         }
 
@@ -180,7 +186,7 @@ export function ProductYoYDashboard() {
             : "Unable to load product YoY analytics.",
         );
       } finally {
-        if (isMounted) {
+        if (isLatestRequest()) {
           setIsLoading(false);
         }
       }
@@ -208,8 +214,19 @@ export function ProductYoYDashboard() {
     );
   }, [analytics?.rows, query]);
 
+  const period = analytics?.period;
+  const currentAvailable = !!period?.months.some((month) => period.availableCurrentMonths.includes(month));
+  const priorAvailable = !!period?.months.some((month) => period.availablePriorMonths.includes(month));
+  const coverageComplete = !!period && currentAvailable && priorAvailable &&
+    period.missingCurrentMonths.length === 0 && period.missingPriorMonths.length === 0;
+  const currentDetail = period?.missingCurrentMonths.length && currentAvailable ? "Partial coverage" : undefined;
+  const priorDetail = period?.missingPriorMonths.length && priorAvailable ? "Partial coverage" : undefined;
+  const headingPeriod = period ? periodLabel(period) : "";
+  const canExport = !!analytics && !isLoading && !error &&
+    customerName === resolvedCustomerName && coverageComplete && rows.length > 0;
+
   function exportVisibleRows() {
-    if (!analytics || !rows.length) {
+    if (!analytics || !canExport) {
       return;
     }
 
@@ -227,7 +244,7 @@ export function ProductYoYDashboard() {
     const workbook = utils.book_new();
 
     utils.book_append_sheet(workbook, worksheet, "Product YoY");
-    writeFile(workbook, exportFileName(analytics, customerName));
+    writeFile(workbook, exportFileName(analytics, resolvedCustomerName));
   }
 
   return (
@@ -239,9 +256,9 @@ export function ProductYoYDashboard() {
               Product YoY Performance
             </h2>
             <p className="mt-1 text-xs text-zinc-500">
-              {analytics
-                ? scopeLabel(analytics, customerName)
-                : "Loading product YoY scope"}
+              {isLoading ? "Loading product YoY scope" : analytics
+                ? scopeLabel(analytics, resolvedCustomerName)
+                : error ? "Product YoY scope unavailable" : "Loading product YoY scope"}
             </p>
           </div>
           <div className="grid w-full gap-3 sm:w-64">
@@ -249,11 +266,16 @@ export function ProductYoYDashboard() {
               Customer
               <select
                 value={customerName}
-                onChange={(event) => setCustomerName(event.target.value)}
+                onChange={(event) => {
+                  if (event.target.value === customerName) return;
+                  requestVersion.current += 1;
+                  setIsLoading(true);
+                  setCustomerName(event.target.value);
+                }}
                 className="h-9 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm font-normal text-zinc-950 shadow-sm outline-none transition-colors focus:border-zinc-400 focus:ring-4 focus:ring-zinc-200/70"
               >
                 <option value="">All Customers</option>
-                {(analytics?.filterOptions.customers ?? []).map((customer) => (
+                {customers.map((customer) => (
                   <option key={customer} value={customer}>
                     {customer}
                   </option>
@@ -275,8 +297,19 @@ export function ProductYoYDashboard() {
           </p>
         ) : null}
 
-        {analytics && !error ? (
+        {analytics && !error && !isLoading ? (
           <>
+            {!coverageComplete ? (
+              <div role="status" id="product-yoy-coverage" className="border-b border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                <p className="font-medium">Incomplete coverage. Comparisons unavailable. Export disabled.</p>
+                {period ? (
+                  <>
+                    {period.missingCurrentMonths.length > 0 ? <p>{analytics.currentYear}: missing {period.missingCurrentMonths.map((month) => monthNames[month - 1]).join(", ")}. {!currentAvailable ? "Year unavailable." : "Totals are partial."}</p> : null}
+                    {period.missingPriorMonths.length > 0 ? <p>{analytics.priorYear}: missing {period.missingPriorMonths.map((month) => monthNames[month - 1]).join(", ")}. {!priorAvailable ? "Year unavailable." : "Totals are partial."}</p> : null}
+                  </>
+                ) : <p>Reporting coverage unavailable.</p>}
+              </div>
+            ) : null}
             <div className="border-b border-zinc-100 p-4">
               <h3 className="text-sm font-semibold text-zinc-950">
                 Overall Summary
@@ -288,46 +321,53 @@ export function ProductYoYDashboard() {
                   detail="SKU rows in item detail"
                 />
                 <SummaryMetric
-                  label={`${analytics.currentYear} YTD Qty`}
-                  value={number(analytics.summary.currentQuantity)}
+                  label={`${analytics.currentYear} ${headingPeriod} Qty`}
+                  value={currentAvailable ? number(analytics.summary.currentQuantity) : "Unavailable"}
+                  detail={currentDetail}
                 />
                 <SummaryMetric
-                  label={`${analytics.priorYear} YTD Qty`}
-                  value={number(analytics.summary.priorQuantity)}
+                  label={`${analytics.priorYear} ${headingPeriod} Qty`}
+                  value={priorAvailable ? number(analytics.summary.priorQuantity) : "Unavailable"}
+                  detail={priorDetail}
                 />
                 <SummaryMetric
                   label="Qty Diff"
-                  value={number(analytics.summary.quantityDiff)}
-                  detail={`Qty YoY ${percent(analytics.summary.quantityGrowth)}`}
+                  value={coverageComplete ? number(analytics.summary.quantityDiff) : "Unavailable"}
+                  detail={coverageComplete ? `Qty YoY ${percent(analytics.summary.quantityGrowth)}` : undefined}
                 />
                 <SummaryMetric
                   label="Qty YoY"
-                  value={percent(analytics.summary.quantityGrowth)}
-                  detail={`${analytics.summary.newItemCount} new · ${analytics.summary.lostItemCount} lost`}
+                  value={coverageComplete ? percent(analytics.summary.quantityGrowth) : "Unavailable"}
+                  detail={coverageComplete ? `${analytics.summary.newItemCount} new · ${analytics.summary.lostItemCount} lost` : undefined}
                 />
                 <SummaryMetric
-                  label={`${analytics.currentYear} YTD Sales`}
-                  value={money(analytics.summary.currentRevenue)}
+                  label={`${analytics.currentYear} ${headingPeriod} Sales`}
+                  value={currentAvailable ? money(analytics.summary.currentRevenue) : "Unavailable"}
+                  detail={currentDetail}
                 />
                 <SummaryMetric
-                  label={`${analytics.priorYear} YTD Sales`}
-                  value={money(analytics.summary.priorRevenue)}
+                  label={`${analytics.priorYear} ${headingPeriod} Sales`}
+                  value={priorAvailable ? money(analytics.summary.priorRevenue) : "Unavailable"}
+                  detail={priorDetail}
                 />
                 <SummaryMetric
                   label="Sales Diff"
-                  value={money(analytics.summary.revenueDiff)}
-                  detail={`Sales YoY ${percent(analytics.summary.revenueGrowth)}`}
+                  value={coverageComplete ? money(analytics.summary.revenueDiff) : "Unavailable"}
+                  detail={coverageComplete ? `Sales YoY ${percent(analytics.summary.revenueGrowth)}` : undefined}
                 />
                 <SummaryMetric
                   label="Sales YoY"
-                  value={percent(analytics.summary.revenueGrowth)}
+                  value={coverageComplete ? percent(analytics.summary.revenueGrowth) : "Unavailable"}
                 />
               </div>
             </div>
+          </>
+        ) : null}
+        {isLoading || (analytics && !error) ? (
             <div className="flex flex-col gap-3 border-b border-zinc-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-              <h3 className="text-sm font-semibold text-zinc-950">
+              {analytics && !isLoading ? <h3 className="text-sm font-semibold text-zinc-950">
                 Item Detail · {number(analytics.summary.lineItemCount)} line items
-              </h3>
+              </h3> : null}
               <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                 <div className="w-full sm:w-80">
                   <label htmlFor="product-yoy-search" className="sr-only">
@@ -337,6 +377,7 @@ export function ProductYoYDashboard() {
                     id="product-yoy-search"
                     aria-label="Search products"
                     value={query}
+                    disabled={isLoading}
                     onChange={(event) => setQuery(event.target.value)}
                     placeholder="Search SKU or description"
                   />
@@ -344,7 +385,8 @@ export function ProductYoYDashboard() {
                 <Button
                   variant="secondary"
                   onClick={exportVisibleRows}
-                  disabled={!rows.length}
+                  disabled={!canExport}
+                  aria-describedby={!isLoading && !coverageComplete ? "product-yoy-coverage" : undefined}
                   className="w-full sm:w-auto"
                 >
                   <Download className="size-4" aria-hidden="true" />
@@ -352,6 +394,8 @@ export function ProductYoYDashboard() {
                 </Button>
               </div>
             </div>
+        ) : null}
+        {analytics && !error && !isLoading ? (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-zinc-100 text-sm">
               <thead className="bg-zinc-50 text-left text-xs font-semibold uppercase text-zinc-500">
@@ -398,27 +442,26 @@ export function ProductYoYDashboard() {
                       {row.description || "-"}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-right text-zinc-950">
-                      {number(row.currentQuantity)}
+                      {currentAvailable ? number(row.currentQuantity) : "Unavailable"}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-right text-zinc-600">
-                      {number(row.priorQuantity)}
+                      {priorAvailable ? number(row.priorQuantity) : "Unavailable"}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-right text-zinc-950">
-                      {number(row.quantityDiff)}
+                      {coverageComplete ? number(row.quantityDiff) : "Unavailable"}
                     </td>
                     <td
                       className={`whitespace-nowrap px-4 py-3 text-right ${quantityGrowthClassName(
-                        row.quantityGrowth,
+                        coverageComplete ? row.quantityGrowth : null,
                       )}`}
                     >
-                      {percent(row.quantityGrowth)}
+                      {coverageComplete ? percent(row.quantityGrowth) : "Unavailable"}
                     </td>
                   </tr>
                 ))}
               </tbody>
               </table>
             </div>
-          </>
         ) : null}
       </div>
     </div>

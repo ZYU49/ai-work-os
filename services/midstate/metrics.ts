@@ -43,6 +43,14 @@ type MidstateMetricRow = Pick<
 };
 
 export type MidstateAnalyticsOverview = {
+  overallRollingSummary: {
+    startMonth: string | null;
+    endMonth: string | null;
+    quantity: number;
+    activeMembers: number;
+    topMember: string | null;
+    topSku: string | null;
+  };
   kpis: {
     ytdQuantity: number;
     currentMonthQuantity: number;
@@ -379,6 +387,39 @@ function overallRollingMonths(rows: MidstateMetricRow[], keys: string[]) {
       topSku: topMapKey(skuTotals),
     };
   });
+}
+
+function overallRollingSummary(
+  rows: MidstateMetricRow[],
+  keys: string[],
+): MidstateAnalyticsOverview["overallRollingSummary"] {
+  const keySet = new Set(keys);
+  const members = new Map<string, { name: string; quantity: number }>();
+  const skus = new Map<string, number>();
+  let quantity = 0;
+
+  for (const row of rows) {
+    if (!keySet.has(monthKey(row.postDate))) {
+      continue;
+    }
+    quantity += row.quantity;
+    const member = members.get(row.memberNumber) ?? {
+      name: row.memberName,
+      quantity: 0,
+    };
+    member.quantity += row.quantity;
+    members.set(row.memberNumber, member);
+    skus.set(row.sku, (skus.get(row.sku) ?? 0) + row.quantity);
+  }
+
+  return {
+    startMonth: rows.length ? keys[0] : null,
+    endMonth: rows.length ? keys.at(-1) ?? null : null,
+    quantity,
+    activeMembers: members.size,
+    topMember: sortByQuantityThenName([...members.values()])[0]?.name ?? null,
+    topSku: topMapKey(skus),
+  };
 }
 
 function rollingItemRankings(rows: MidstateMetricRow[], keys: string[]) {
@@ -720,6 +761,7 @@ export function summarizeMidstateRowsForTest(
     : null;
 
   return {
+    overallRollingSummary: overallRollingSummary(filterOptionRows, rollingKeys),
     kpis: {
       ytdQuantity: ytdRows.reduce((sum, row) => sum + row.quantity, 0),
       currentMonthQuantity: latestMonth?.quantity ?? 0,
@@ -732,7 +774,7 @@ export function summarizeMidstateRowsForTest(
     },
     selectedMember: selectedMemberSummary,
     rollingMonths: quantityRollingMonths(rollingRows, rollingKeys),
-    overallRollingMonths: overallRollingMonths(overallRows, rollingKeys),
+    overallRollingMonths: overallRollingMonths(filterOptionRows, rollingKeys),
     itemRankings: rollingItemRankings(overallRows, rollingKeys),
     memberItemBreakdown: rollingMemberItemBreakdown(
       rows,

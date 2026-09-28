@@ -60,6 +60,49 @@ describe("midstate metrics", () => {
     expect(analytics.kpis.currentMonthQuantity).toBe(210);
   });
 
+  test("keeps an unfiltered rolling summary with unique members and period-wide leaders", () => {
+    const sourceRows = [
+      { ...rows[0], postDate: new Date(2025, 7, 1), memberNumber: "old", memberName: "Outside period", sku: "OLD", quantity: 999999 },
+      { ...rows[0], postDate: new Date(2025, 8, 1), quantity: 100000 },
+      { ...rows[0], postDate: new Date(2026, 7, 1), quantity: 1212 },
+      { ...rows[0], postDate: new Date(2026, 7, 1), memberNumber: "atwood", memberName: "Atwood", sku: "ATWOOD", quantity: 20000 },
+      ...Array.from({ length: 19 }, (_, index) => ({
+        ...rows[0], postDate: new Date(2025, 9, 1), memberNumber: `member-${index}`,
+        memberName: "Shared display name", sku: "OTHER", quantity: 200,
+      })),
+    ];
+    const overall = summarizeMidstateRowsForTest(sourceRows, { year: 2026 });
+
+    expect(overall.overallRollingSummary).toEqual({
+      startMonth: "2025-09", endMonth: "2026-08", quantity: 125012,
+      activeMembers: 21, topMember: "Bomgaars", topSku: "WD1030",
+    });
+    for (const memberNumber of ["atwood", "82801", "missing"]) {
+      const selected = summarizeMidstateRowsForTest(
+        sourceRows.filter((row) => row.memberNumber === memberNumber),
+        { year: 2026, memberNumber }, sourceRows,
+      );
+      expect(selected.overallRollingSummary).toEqual(overall.overallRollingSummary);
+      expect(selected.overallRollingMonths).toEqual(overall.overallRollingMonths);
+      expect(selected.itemRankings).toEqual(overall.itemRankings);
+      if (memberNumber === "atwood") {
+        expect(selected.kpis.topMember).toBe("Atwood");
+        expect(selected.kpis.topSku).toBe("ATWOOD");
+        expect(selected.kpis.activeMembers).toBe(1);
+        expect(selected.memberItemBreakdown?.totalQuantity).toBe(20000);
+        expect(selected.rollingMonths.at(-1)?.quantity).toBe(20000);
+      }
+    }
+  });
+
+  test("returns empty overall summary without inventing a source period", () => {
+    const analytics = summarizeMidstateRowsForTest([], { year: 2026 });
+    expect(analytics.overallRollingSummary).toEqual({
+      startMonth: null, endMonth: null, quantity: 0,
+      activeMembers: 0, topMember: null, topSku: null,
+    });
+  });
+
   test("returns no SKU member distribution when no SKU filter is selected", () => {
     const analytics = summarizeMidstateRowsForTest(rows, {
       year: 2026,

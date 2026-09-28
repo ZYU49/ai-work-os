@@ -8,6 +8,8 @@ import {
 const rows = [
   {
     orderDate: new Date("2025-01-15"),
+    shipToState: null,
+    memberName: null,
     customerName: "A",
     sku: "SKU-1",
     category: "L&G",
@@ -17,6 +19,8 @@ const rows = [
   },
   {
     orderDate: new Date("2026-01-10"),
+    shipToState: null,
+    memberName: null,
     customerName: "A",
     sku: "SKU-1",
     category: "L&G",
@@ -26,6 +30,8 @@ const rows = [
   },
   {
     orderDate: new Date("2026-02-10"),
+    shipToState: null,
+    memberName: null,
     customerName: "B",
     sku: "SKU-2",
     category: "Tube",
@@ -96,6 +102,8 @@ describe("sales metrics", () => {
       [
         {
           orderDate: new Date("2025-08-10"),
+          shipToState: null,
+          memberName: null,
           customerName: "Declining Customer",
           sku: "SKU-1",
           category: "L&G",
@@ -105,6 +113,8 @@ describe("sales metrics", () => {
         },
         {
           orderDate: new Date("2026-08-10"),
+          shipToState: null,
+          memberName: null,
           customerName: "Declining Customer",
           sku: "SKU-1",
           category: "L&G",
@@ -114,6 +124,8 @@ describe("sales metrics", () => {
         },
         {
           orderDate: new Date("2025-08-11"),
+          shipToState: null,
+          memberName: null,
           customerName: "Growing Customer",
           sku: "SKU-2",
           category: "Tube",
@@ -123,6 +135,8 @@ describe("sales metrics", () => {
         },
         {
           orderDate: new Date("2026-08-11"),
+          shipToState: null,
+          memberName: null,
           customerName: "Growing Customer",
           sku: "SKU-2",
           category: "Tube",
@@ -132,6 +146,8 @@ describe("sales metrics", () => {
         },
         {
           orderDate: new Date("2026-07-11"),
+          shipToState: null,
+          memberName: null,
           customerName: "Growing Customer",
           sku: "SKU-3",
           category: "Tube",
@@ -189,6 +205,8 @@ describe("sales metrics", () => {
       [
         {
           orderDate: new Date("2026-01-10"),
+          shipToState: null,
+          memberName: null,
           customerName: "A",
           sku: "SKU-1",
           category: "L&G",
@@ -198,6 +216,8 @@ describe("sales metrics", () => {
         },
         {
           orderDate: new Date("2026-03-10"),
+          shipToState: null,
+          memberName: null,
           customerName: "B",
           sku: "SKU-2",
           category: "Tube",
@@ -212,6 +232,13 @@ describe("sales metrics", () => {
     expect(summary.monthly).toEqual([
       expect.objectContaining({
         month: "2026-01",
+        momQuantityGrowth: null,
+        momRevenueGrowth: null,
+      }),
+      expect.objectContaining({
+        month: "2026-02",
+        quantity: null,
+        revenue: null,
         momQuantityGrowth: null,
         momRevenueGrowth: null,
       }),
@@ -242,6 +269,8 @@ describe("sales metrics", () => {
       [
         {
           orderDate: new Date(2026, 0, 1),
+          shipToState: null,
+          memberName: null,
           customerName: "A",
           sku: "SKU-1",
           category: "L&G",
@@ -251,6 +280,8 @@ describe("sales metrics", () => {
         },
         {
           orderDate: new Date(2026, 1, 1),
+          shipToState: null,
+          memberName: null,
           customerName: "B",
           sku: "SKU-2",
           category: "Tube",
@@ -260,6 +291,8 @@ describe("sales metrics", () => {
         },
         {
           orderDate: new Date(2025, 1, 1),
+          shipToState: null,
+          memberName: null,
           customerName: "B",
           sku: "SKU-2",
           category: "Tube",

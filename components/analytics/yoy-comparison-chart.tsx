@@ -14,17 +14,17 @@ type YoYComparisonPoint = {
   monthLabel: string;
   currentYear: number;
   priorYear: number;
-  currentQuantity: number;
+  currentQuantity: number | null;
   priorQuantity: number | null;
   quantityGrowth: number | null;
-  currentRevenue: number;
+  currentRevenue: number | null;
   priorRevenue: number | null;
   revenueGrowth: number | null;
 };
 
 type TooltipPayload = {
   name?: string | number;
-  value?: string | number;
+  value?: string | number | null;
   payload?: YoYComparisonPoint;
 };
 
@@ -96,11 +96,11 @@ function YoYTooltip({
       <p className="mb-2 font-medium text-zinc-950">{label}</p>
       <div className="space-y-1 text-zinc-600">
         <p>
-          {point.currentYear}: {formatValue(currentValue)}
+          {point.currentYear}: {currentValue === null ? "Unavailable" : formatValue(currentValue)}
         </p>
         <p>
           {point.priorYear}:{" "}
-          {priorValue === null ? "N/A" : formatValue(priorValue)}
+          {priorValue === null ? "Unavailable" : formatValue(priorValue)}
         </p>
         <p>YoY: {percent(growth)}</p>
       </div>
@@ -167,7 +167,7 @@ export function YoYComparisonChart({
               axisLine={false}
               tickFormatter={yAxisTickFormatter}
             />
-            <Tooltip content={<YoYTooltip metric={metric} />} />
+            <Tooltip filterNull={false} content={<YoYTooltip metric={metric} />} />
             <Bar
               dataKey={currentDataKey}
               fill={currentYearColor}

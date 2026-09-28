@@ -17,16 +17,18 @@ import {
   type SalesFilterOptions,
 } from "@/components/analytics/sales-filters";
 import { Button } from "@/components/ui/button";
+import type { SalesReportingPeriod } from "@/services/analytics/reporting-period";
 
 type SalesAnalytics = {
+  period: SalesReportingPeriod;
   kpis: {
     ytdQuantity: number;
     ytdRevenue: number;
   };
   monthly: Array<{
     month: string;
-    quantity: number;
-    revenue: number;
+    quantity: number | null;
+    revenue: number | null;
     momQuantityGrowth: number | null;
     momRevenueGrowth: number | null;
     yoyQuantityGrowth: number | null;
@@ -37,10 +39,10 @@ type SalesAnalytics = {
     monthLabel: string;
     currentYear: number;
     priorYear: number;
-    currentQuantity: number;
+    currentQuantity: number | null;
     priorQuantity: number | null;
     quantityGrowth: number | null;
-    currentRevenue: number;
+    currentRevenue: number | null;
     priorRevenue: number | null;
     revenueGrowth: number | null;
   }>;
@@ -104,28 +106,30 @@ const monthNames = [
   "Dec",
 ];
 
-function scopeLabel(
-  filters: SalesDashboardFilters,
-  latestMonth?: string | null,
-) {
-  const startMonth = filters.startMonth ? Number(filters.startMonth) : 1;
-  const latestDataMonth = latestMonth
-    ? Number(latestMonth.split("-")[1])
-    : undefined;
-  const endMonth = filters.endMonth
-    ? Number(filters.endMonth)
-    : (latestDataMonth ?? 12);
-  const isYtd = !filters.startMonth && !filters.endMonth;
+const periodLabels = { month: "Month", ytd: "YTD", period: "Period" };
+
+function scopeLabel(period: SalesReportingPeriod) {
+  const { currentYear, startMonth, endMonth, kind, months } = period;
+  const prefix = `Scope: ${currentYear} ${periodLabels[kind]}`;
+  if (months.length === 0) {
+    return `${prefix} - data unavailable`;
+  }
   const rangeLabel =
     startMonth === endMonth
       ? monthNames[startMonth - 1]
       : `${monthNames[startMonth - 1]}-${monthNames[endMonth - 1]}`;
 
-  return `Scope: ${filters.year}${isYtd ? " YTD" : ""} ${rangeLabel}`;
+  const coverage = period.missingCurrentMonths.length === 0
+    ? ""
+    : period.missingCurrentMonths.length === months.length
+      ? " - data unavailable"
+      : " - partial data";
+  return `${prefix} ${rangeLabel}${coverage}`;
 }
 
 export function AnalyticsDashboard() {
   const [analytics, setAnalytics] = useState<SalesAnalytics | null>(null);
+  const [filterOptions, setFilterOptions] = useState<SalesFilterOptions | null>(null);
   const [filters, setFilters] = useState<SalesDashboardFilters>(defaultFilters);
   const [yoyMetric, setYoyMetric] = useState<YoYMetric>("quantity");
   const [movementPeriod, setMovementPeriod] = useState("ytd");
@@ -135,7 +139,19 @@ export function AnalyticsDashboard() {
   const requestSequenceRef = useRef(0);
 
   const latestMonth = analytics?.monthly.at(-1);
-  const currentScopeLabel = scopeLabel(filters, latestMonth?.month);
+  const period = analytics?.period;
+  const currentScopeLabel = period ? scopeLabel(period) : "";
+  const periodLabel = period ? periodLabels[period.kind] : "";
+  const availableMonthCount = period?.months.filter((month) =>
+    period.availableCurrentMonths.includes(month),
+  ).length ?? 0;
+  const coverageDetail = period
+    ? availableMonthCount === 0
+      ? `Data unavailable for ${period.currentYear}`
+      : period.missingCurrentMonths.length > 0
+        ? `Partial data: ${availableMonthCount} of ${period.months.length} months available`
+        : undefined
+    : undefined;
 
   const loadAnalytics = useCallback(async (nextFilters: SalesDashboardFilters) => {
     abortControllerRef.current?.abort();
@@ -143,6 +159,7 @@ export function AnalyticsDashboard() {
     abortControllerRef.current = abortController;
     const requestSequence = ++requestSequenceRef.current;
 
+    setIsLoading(true);
     setError(null);
 
     try {
@@ -171,6 +188,16 @@ export function AnalyticsDashboard() {
       }
 
       setAnalytics(data.analytics);
+      const nextOptions: SalesFilterOptions = data.analytics.filterOptions;
+      setFilterOptions((previous) => ({
+        ...nextOptions,
+        years: Array.from(new Set([
+          currentYear,
+          String(Number(currentYear) - 1),
+          ...(previous?.years ?? []),
+          ...nextOptions.years,
+        ])).sort(),
+      }));
       setMovementPeriod(data.analytics.customerMovement.defaultPeriod);
     } catch (loadError) {
       if (
@@ -226,11 +253,14 @@ export function AnalyticsDashboard() {
   );
 
   function resetFilters() {
-    setIsLoading(true);
-    setFilters(defaultFilters);
+    handleFiltersChange({ ...defaultFilters });
   }
 
   function handleFiltersChange(nextFilters: SalesDashboardFilters) {
+    // Invalidate before the effect's deferred request can start.
+    abortControllerRef.current?.abort();
+    requestSequenceRef.current += 1;
+    setError(null);
     setIsLoading(true);
     setFilters(nextFilters);
   }
@@ -240,7 +270,7 @@ export function AnalyticsDashboard() {
       <div className="flex flex-col gap-3">
         <SalesFilters
           filters={filters}
-          options={analytics?.filterOptions ?? fallbackFilterOptions}
+          options={filterOptions ?? fallbackFilterOptions}
           onChange={handleFiltersChange}
           onReset={resetFilters}
         />
@@ -248,7 +278,6 @@ export function AnalyticsDashboard() {
           <Button
             variant="secondary"
             onClick={() => {
-              setIsLoading(true);
               void loadAnalytics(filters);
             }}
           >
@@ -269,11 +298,19 @@ export function AnalyticsDashboard() {
         </p>
       ) : null}
 
-      {analytics ? (
+      {analytics && !isLoading ? (
         <>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <KpiCard label="YTD Quantity" value={number(analytics.kpis.ytdQuantity)} />
-            <KpiCard label="YTD Sales" value={money(analytics.kpis.ytdRevenue)} />
+            <KpiCard
+              label={`${periodLabel} Quantity`}
+              value={availableMonthCount > 0 ? number(analytics.kpis.ytdQuantity) : "Unavailable"}
+              detail={coverageDetail}
+            />
+            <KpiCard
+              label={`${periodLabel} Sales`}
+              value={availableMonthCount > 0 ? money(analytics.kpis.ytdRevenue) : "Unavailable"}
+              detail={coverageDetail}
+            />
             <KpiCard
               label="Latest MoM"
               value={`Qty ${percent(latestMonth?.momQuantityGrowth ?? null)}`}

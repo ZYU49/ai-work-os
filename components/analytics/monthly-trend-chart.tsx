@@ -13,8 +13,8 @@ import {
 
 type MonthlyPoint = {
   month: string;
-  quantity: number;
-  revenue: number;
+  quantity: number | null;
+  revenue: number | null;
 };
 
 type MonthlyTrendChartLabels = {
@@ -73,10 +73,13 @@ export function MonthlyTrendChart({
             tickFormatter={(value: number) => money(value)}
           />
           <Tooltip
+            filterNull={false}
             formatter={(value, name) =>
-              name === valueLabel
-                ? money(Number(value ?? 0))
-                : Number(value ?? 0).toLocaleString()
+              value == null
+                ? "Unavailable"
+                : name === valueLabel
+                  ? money(Number(value))
+                  : Number(value).toLocaleString()
             }
           />
           <Bar yAxisId="right" dataKey="revenue" fill="#71717a" name={valueLabel} />
@@ -87,6 +90,7 @@ export function MonthlyTrendChart({
             stroke="#18181b"
             strokeWidth={2}
             dot={false}
+            connectNulls={false}
             name={quantityLabel}
           />
         </ComposedChart>

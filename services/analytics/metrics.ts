@@ -1,6 +1,7 @@
 import type { SalesRecord } from "@prisma/client";
 import { z } from "zod";
 import { analyticsCustomerFilter, analyticsCustomerName } from "./customer-groups";
+import { resolveSalesReportingPeriod, type SalesReportingPeriod } from "./reporting-period";
 
 export const salesAnalyticsFiltersSchema = z
   .object({
@@ -51,8 +52,8 @@ type SalesAnalyticsRanking = {
 
 type SalesAnalyticsMonthly = {
   month: string;
-  quantity: number;
-  revenue: number;
+  quantity: number | null;
+  revenue: number | null;
   momQuantityGrowth: number | null;
   momRevenueGrowth: number | null;
   yoyQuantityGrowth: number | null;
@@ -64,10 +65,10 @@ type SalesAnalyticsYoYComparison = {
   monthLabel: string;
   currentYear: number;
   priorYear: number;
-  currentQuantity: number;
+  currentQuantity: number | null;
   priorQuantity: number | null;
   quantityGrowth: number | null;
-  currentRevenue: number;
+  currentRevenue: number | null;
   priorRevenue: number | null;
   revenueGrowth: number | null;
 };
@@ -88,6 +89,8 @@ type SalesAnalyticsCustomerMovementRow = {
 type SalesAnalyticsCustomerMovementPeriod = {
   period: string;
   label: string;
+  currentAvailable: boolean;
+  priorAvailable: boolean;
   summary: {
     currentQuantity: number;
     priorQuantity: number;
@@ -103,6 +106,7 @@ type SalesAnalyticsCustomerMovementPeriod = {
 };
 
 export type SalesAnalyticsOverview = {
+  period: SalesReportingPeriod;
   kpis: {
     ytdQuantity: number;
     ytdRevenue: number;
@@ -112,6 +116,8 @@ export type SalesAnalyticsOverview = {
   monthly: SalesAnalyticsMonthly[];
   yoyComparison: SalesAnalyticsYoYComparison[];
   customerMovement: {
+    currentYear: number;
+    priorYear: number;
     defaultPeriod: string;
     periods: Array<{ value: string; label: string }>;
     byPeriod: Record<string, SalesAnalyticsCustomerMovementPeriod>;
@@ -145,10 +151,10 @@ type SalesMetricRowSelection = {
 };
 
 export function calculateGrowth(
-  current: number,
+  current: number | null | undefined,
   previous: number | null | undefined,
 ): number | null {
-  if (!previous) {
+  if (current == null || !previous) {
     return null;
   }
 
@@ -202,7 +208,10 @@ function customerMovementPeriod(
   priorRows: SalesMetricRow[],
   period: string,
   label: string,
+  currentAvailable: boolean,
+  priorAvailable: boolean,
 ): SalesAnalyticsCustomerMovementPeriod {
+  const comparable = currentAvailable && priorAvailable;
   const customers = new Map<
     string,
     {
@@ -265,11 +274,11 @@ function customerMovementPeriod(
       currentQuantity: values.currentQuantity,
       priorQuantity: values.priorQuantity,
       quantityDiff,
-      quantityGrowth: calculateGrowth(values.currentQuantity, values.priorQuantity),
+      quantityGrowth: comparable ? calculateGrowth(values.currentQuantity, values.priorQuantity) : null,
       currentRevenue: values.currentRevenue,
       priorRevenue: values.priorRevenue,
       revenueDiff,
-      revenueGrowth: calculateGrowth(values.currentRevenue, values.priorRevenue),
+      revenueGrowth: comparable ? calculateGrowth(values.currentRevenue, values.priorRevenue) : null,
     };
   });
   const currentQuantity = rows.reduce((sum, row) => sum + row.currentQuantity, 0);
@@ -280,22 +289,24 @@ function customerMovementPeriod(
   return {
     period,
     label,
+    currentAvailable,
+    priorAvailable,
     summary: {
       currentQuantity,
       priorQuantity,
       quantityDiff: currentQuantity - priorQuantity,
-      quantityGrowth: calculateGrowth(currentQuantity, priorQuantity),
+      quantityGrowth: comparable ? calculateGrowth(currentQuantity, priorQuantity) : null,
       currentRevenue,
       priorRevenue,
       revenueDiff: currentRevenue - priorRevenue,
-      revenueGrowth: calculateGrowth(currentRevenue, priorRevenue),
+      revenueGrowth: comparable ? calculateGrowth(currentRevenue, priorRevenue) : null,
     },
     declining: rows
-      .filter((row) => row.quantityDiff < 0)
+      .filter((row) => comparable && row.quantityDiff < 0)
       .sort((a, b) => a.quantityDiff - b.quantityDiff)
       .slice(0, 10),
     growing: rows
-      .filter((row) => row.quantityDiff > 0)
+      .filter((row) => comparable && row.quantityDiff > 0)
       .sort((a, b) => b.quantityDiff - a.quantityDiff)
       .slice(0, 10),
   };
@@ -310,20 +321,13 @@ function monthInRange(month: number, startMonth: number, endMonth: number) {
   return month >= startMonth && month <= endMonth;
 }
 
-function monthRange(filters: SalesAnalyticsFilters) {
-  return {
-    startMonth: filters.startMonth ?? 1,
-    endMonth: filters.endMonth ?? 12,
-  };
-}
-
 export function summarizeSalesRowsForTest(
   rows: SalesMetricRow[],
   filters: SalesAnalyticsFilters,
   filterOptionRows: SalesMetricRow[] = rows,
 ): SalesAnalyticsOverview {
-  const year = filters.year ?? new Date().getFullYear();
-  const { startMonth, endMonth } = monthRange(filters);
+  const period = resolveSalesReportingPeriod(filterOptionRows, filters);
+  const { currentYear: year, startMonth, endMonth } = period;
   const scopedRows = rows
     .filter((row) => !filters.customerName ||
       analyticsCustomerName(row.customerName) === analyticsCustomerName(filters.customerName))
@@ -339,20 +343,22 @@ export function summarizeSalesRowsForTest(
       monthInRange(row.orderDate.getMonth() + 1, startMonth, endMonth),
   );
   const monthlyMap = new Map<string, { quantity: number; revenue: number }>();
-  const priorMonthlyMap = new Map<string, { quantity: number; revenue: number }>();
   const customers = new Map<string, { quantity: number; revenue: number }>();
   const categories = new Map<string, { quantity: number; revenue: number }>();
   const skus = new Map<string, { quantity: number; revenue: number }>();
   const salespeople = new Map<string, { quantity: number; revenue: number }>();
   const states = new Map<string, { quantity: number; revenue: number }>();
 
-  for (const row of currentRows) {
+  // Keep full-year baselines, including prior December for January MoM.
+  for (const row of scopedRows) {
     const key = monthKey(row.orderDate);
     const month = monthlyMap.get(key) ?? { quantity: 0, revenue: 0 };
     month.quantity += row.quantity;
     month.revenue += row.revenue;
     monthlyMap.set(key, month);
+  }
 
+  for (const row of currentRows) {
     addToRanking(customers, row.customerName, row.quantity, row.revenue);
     addToRanking(categories, row.category, row.quantity, row.revenue);
     addToRanking(skus, row.sku, row.quantity, row.revenue);
@@ -360,62 +366,60 @@ export function summarizeSalesRowsForTest(
     addToRanking(states, row.shipToState, row.quantity, row.revenue);
   }
 
-  for (const row of priorRows) {
-    const key = `${year}-${String(row.orderDate.getMonth() + 1).padStart(2, "0")}`;
-    const month = priorMonthlyMap.get(key) ?? { quantity: 0, revenue: 0 };
-    month.quantity += row.quantity;
-    month.revenue += row.revenue;
-    priorMonthlyMap.set(key, month);
+  const globallyAvailableMonths = new Set(filterOptionRows.map((row) => monthKey(row.orderDate)));
+  function availableMonthlyValue(key: string) {
+    if (!globallyAvailableMonths.has(key)) return null;
+    return monthlyMap.get(key) ?? { quantity: 0, revenue: 0 };
   }
 
-  const monthly = [...monthlyMap.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([month, value]) => {
-      const previous = monthlyMap.get(previousMonthKey(month));
-      const prior = priorMonthlyMap.get(month);
+  const monthly = period.months.map((numericMonth) => {
+    const monthText = String(numericMonth).padStart(2, "0");
+    const month = `${year}-${monthText}`;
+    const value = availableMonthlyValue(month);
+    const previous = availableMonthlyValue(previousMonthKey(month));
+    const prior = availableMonthlyValue(`${year - 1}-${monthText}`);
 
-      return {
-        month,
-        quantity: value.quantity,
-        revenue: value.revenue,
-        momQuantityGrowth: calculateGrowth(value.quantity, previous?.quantity),
-        momRevenueGrowth: calculateGrowth(value.revenue, previous?.revenue),
-        yoyQuantityGrowth: calculateGrowth(value.quantity, prior?.quantity),
-        yoyRevenueGrowth: calculateGrowth(value.revenue, prior?.revenue),
-      };
-    });
-  const yoyComparison = [...monthlyMap.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([month, value]) => {
-      const [, monthText] = month.split("-");
-      const numericMonth = Number(monthText);
-      const prior = priorMonthlyMap.get(month);
+    return {
+      month,
+      quantity: value?.quantity ?? null,
+      revenue: value?.revenue ?? null,
+      momQuantityGrowth: calculateGrowth(value?.quantity, previous?.quantity),
+      momRevenueGrowth: calculateGrowth(value?.revenue, previous?.revenue),
+      yoyQuantityGrowth: calculateGrowth(value?.quantity, prior?.quantity),
+      yoyRevenueGrowth: calculateGrowth(value?.revenue, prior?.revenue),
+    };
+  });
+  const yoyComparison = period.months.map((numericMonth) => {
+    const monthText = String(numericMonth).padStart(2, "0");
+    const value = availableMonthlyValue(`${year}-${monthText}`);
+    const prior = availableMonthlyValue(`${year - 1}-${monthText}`);
 
-      return {
-        month: monthText,
-        monthLabel: monthLabel(numericMonth),
-        currentYear: year,
-        priorYear: year - 1,
-        currentQuantity: value.quantity,
-        priorQuantity: prior?.quantity ?? null,
-        quantityGrowth: calculateGrowth(value.quantity, prior?.quantity),
-        currentRevenue: value.revenue,
-        priorRevenue: prior?.revenue ?? null,
-        revenueGrowth: calculateGrowth(value.revenue, prior?.revenue),
-      };
-    });
-  const movementMonthKeys = [
-    ...new Set([...monthlyMap.keys(), ...priorMonthlyMap.keys()]),
-  ].sort((a, b) => a.localeCompare(b));
+    return {
+      month: monthText,
+      monthLabel: monthLabel(numericMonth),
+      currentYear: year,
+      priorYear: year - 1,
+      currentQuantity: value?.quantity ?? null,
+      priorQuantity: prior?.quantity ?? null,
+      quantityGrowth: calculateGrowth(value?.quantity, prior?.quantity),
+      currentRevenue: value?.revenue ?? null,
+      priorRevenue: prior?.revenue ?? null,
+      revenueGrowth: calculateGrowth(value?.revenue, prior?.revenue),
+    };
+  });
+  const movementMonths = period.months.filter((month) =>
+    period.availableCurrentMonths.includes(month) || period.availablePriorMonths.includes(month));
+  const aggregateLabel = period.kind === "month" ? "Month" : period.kind === "ytd" ? "YTD" : "Period";
   const customerMovementPeriods = Object.fromEntries(
     [
       [
         "ytd",
-        customerMovementPeriod(currentRows, priorRows, "ytd", "YTD"),
+        customerMovementPeriod(currentRows, priorRows, "ytd", aggregateLabel,
+          period.months.length > 0 && period.missingCurrentMonths.length === 0,
+          period.months.length > 0 && period.missingPriorMonths.length === 0),
       ] as const,
-      ...movementMonthKeys.map((month) => {
-        const [, monthText] = month.split("-");
-        const numericMonth = Number(monthText);
+      ...movementMonths.map((numericMonth) => {
+        const monthText = String(numericMonth).padStart(2, "0");
         const currentMonthRows = currentRows.filter(
           (row) => row.orderDate.getMonth() + 1 === numericMonth,
         );
@@ -430,18 +434,22 @@ export function summarizeSalesRowsForTest(
             priorMonthRows,
             monthText,
             monthLabel(numericMonth),
+            period.availableCurrentMonths.includes(numericMonth),
+            period.availablePriorMonths.includes(numericMonth),
           ),
         ] as const;
       }),
     ],
   );
-  const defaultMovementPeriod =
-    movementMonthKeys.at(-1)?.split("-")[1] ?? "ytd";
+  const defaultMovementMonth = movementMonths.filter((month) => period.availableCurrentMonths.includes(month)).at(-1)
+    ?? movementMonths.at(-1);
+  const defaultMovementPeriod = defaultMovementMonth ? String(defaultMovementMonth).padStart(2, "0") : "ytd";
 
   const ytdQuantity = currentRows.reduce((sum, row) => sum + row.quantity, 0);
   const ytdRevenue = currentRows.reduce((sum, row) => sum + row.revenue, 0);
 
   return {
+    period,
     kpis: {
       ytdQuantity,
       ytdRevenue,
@@ -451,14 +459,15 @@ export function summarizeSalesRowsForTest(
     monthly,
     yoyComparison,
     customerMovement: {
+      currentYear: year,
+      priorYear: year - 1,
       defaultPeriod: defaultMovementPeriod,
       periods: [
-        { value: "ytd", label: "YTD" },
-        ...movementMonthKeys.map((month) => {
-          const [, monthText] = month.split("-");
+        { value: "ytd", label: aggregateLabel },
+        ...movementMonths.map((month) => {
           return {
-            value: monthText,
-            label: monthLabel(Number(monthText)),
+            value: String(month).padStart(2, "0"),
+            label: monthLabel(month),
           };
         }),
       ],
@@ -510,11 +519,10 @@ export async function getSalesAnalytics(
   filters: SalesAnalyticsFilters,
 ): Promise<SalesAnalyticsOverview> {
   const year = filters.year ?? new Date().getFullYear();
-  const { startMonth, endMonth } = monthRange(filters);
   const { prisma } = await import("@/lib/db");
   const dateWhere = {
-    gte: new Date(year - 1, startMonth - 1, 1),
-    lt: new Date(year, endMonth, 1),
+    gte: new Date(year - 1, 0, 1),
+    lt: new Date(year + 1, 0, 1),
   };
   const select: SalesMetricRowSelection = {
     orderDate: true,

@@ -1,5 +1,6 @@
 import type { SalesRecord } from "@prisma/client";
 import { analyticsCustomerFilter, analyticsCustomerName } from "./customer-groups";
+import { resolveSalesReportingPeriod, type SalesReportingPeriod } from "./reporting-period";
 import {
   type SalesAnalyticsFilters,
   salesAnalyticsFiltersSchema,
@@ -37,6 +38,7 @@ type ProductYoYSummary = {
 };
 
 export type ProductYoYOverview = {
+  period: SalesReportingPeriod;
   currentYear: number;
   priorYear: number;
   months: number[];
@@ -74,8 +76,9 @@ export function summarizeProductYoYRowsForTest(
   filterOptionRows: ProductYoYSourceRow[] = rows,
 ): ProductYoYOverview {
   const parsedFilters = salesAnalyticsFiltersSchema.parse(filters);
-  const currentYear = parsedFilters.year ?? new Date().getFullYear();
-  const priorYear = currentYear - 1;
+  const period = resolveSalesReportingPeriod(filterOptionRows, parsedFilters);
+  const { currentYear, priorYear, months } = period;
+  const comparable = months.length > 0 && period.missingCurrentMonths.length === 0 && period.missingPriorMonths.length === 0;
   const optionRows = filterOptionRows.filter(
     (row) =>
       row.orderDate.getFullYear() === currentYear ||
@@ -92,20 +95,6 @@ export function summarizeProductYoYRowsForTest(
         !parsedFilters.customerName ||
         analyticsCustomerName(row.customerName) === analyticsCustomerName(parsedFilters.customerName),
     );
-  // Use the report's shared YTD window, not just months when this customer bought.
-  const reportCurrentRows = optionRows.filter(
-    (row) => row.orderDate.getFullYear() === currentYear,
-  );
-  const latestReportMonth = reportCurrentRows.reduce(
-    (latest, row) => Math.max(latest, row.orderDate.getMonth() + 1),
-    0,
-  );
-  const startMonth = parsedFilters.startMonth ?? 1;
-  const endMonth = parsedFilters.endMonth ?? latestReportMonth;
-  const months = Array.from(
-    { length: Math.max(0, endMonth - startMonth + 1) },
-    (_, index) => startMonth + index,
-  );
   const allowedMonths = new Set(months);
   const currentQuantityBySku = new Map<string, number>();
   const priorQuantityBySku = new Map<string, number>();
@@ -155,7 +144,7 @@ export function summarizeProductYoYRowsForTest(
         currentQuantity,
         priorQuantity,
         quantityDiff: currentQuantity - priorQuantity,
-        quantityGrowth: calculateGrowth(currentQuantity, priorQuantity),
+        quantityGrowth: comparable ? calculateGrowth(currentQuantity, priorQuantity) : null,
       };
     })
     .sort(
@@ -177,6 +166,7 @@ export function summarizeProductYoYRowsForTest(
   );
 
   return {
+    period,
     currentYear,
     priorYear,
     months,
@@ -184,11 +174,11 @@ export function summarizeProductYoYRowsForTest(
       currentQuantity,
       priorQuantity,
       quantityDiff: currentQuantity - priorQuantity,
-      quantityGrowth: calculateGrowth(currentQuantity, priorQuantity),
+      quantityGrowth: comparable ? calculateGrowth(currentQuantity, priorQuantity) : null,
       currentRevenue,
       priorRevenue,
       revenueDiff: currentRevenue - priorRevenue,
-      revenueGrowth: calculateGrowth(currentRevenue, priorRevenue),
+      revenueGrowth: comparable ? calculateGrowth(currentRevenue, priorRevenue) : null,
       lineItemCount: outputRows.length,
       newItemCount: outputRows.filter(
         (row) => row.currentQuantity > 0 && row.priorQuantity === 0,
@@ -252,16 +242,8 @@ export async function getProductYoYAnalytics(
     }),
     prisma.salesRecord.findMany({
       where: {
-      orderDate: {
-          gte: new Date(year - 1, 0, 1),
-          lt: new Date(year + 1, 0, 1),
+        orderDate: dateWhere,
       },
-      ...(filters.salesperson ? { salesperson: filters.salesperson } : {}),
-      ...(filters.category ? { category: filters.category } : {}),
-      ...(filters.sku ? { sku: filters.sku } : {}),
-      ...(filters.shipToState ? { shipToState: filters.shipToState } : {}),
-      ...(filters.memberName ? { memberName: filters.memberName } : {}),
-    },
       select,
     }),
   ]);

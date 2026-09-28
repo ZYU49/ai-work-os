@@ -42,12 +42,15 @@ function chartTitle(analytics: MidstateAnalyticsOverview | null) {
 }
 
 function summarySentence(analytics: MidstateAnalyticsOverview) {
+  const summary = analytics.overallRollingSummary;
+  if (!summary.endMonth) {
+    return "No Midstate rolling data yet.";
+  }
   const latestMonth = latest(analytics.overallRollingMonths);
-  const month = latestMonth?.month ?? "latest month";
-  const member = analytics.kpis.topMember ?? "N/A";
-  const sku = analytics.kpis.topSku ?? "N/A";
+  const member = summary.topMember ?? "N/A";
+  const sku = summary.topSku ?? "N/A";
 
-  return `${month} sell-through is ${number(latestMonth?.quantity ?? 0)} units. Top member is ${member}, and top SKU is ${sku}.`;
+  return `${summary.endMonth} sell-through is ${number(latestMonth?.quantity ?? 0)} units. Rolling 12 months (${summary.startMonth} to ${summary.endMonth}): top member is ${member}, and top SKU is ${sku}.`;
 }
 
 function ModeToggle({
@@ -443,20 +446,25 @@ export function MidstateDashboard() {
   );
 
   function resetFilters() {
-    setIsLoading(true);
-    setFilters(defaultFilters);
+    handleFiltersChange(defaultFilters);
   }
 
   function handleFiltersChange(nextFilters: MidstateDashboardFilters) {
+    abortControllerRef.current?.abort();
     setIsLoading(true);
     setIsMemberItemsOpen(false);
     setFilters(nextFilters);
   }
 
   const latestOverall = analytics ? latest(analytics.overallRollingMonths) : null;
-  const latestMember = analytics ? latest(analytics.rollingMonths) : null;
-  const memberData = analytics?.selectedMember ? analytics.rollingMonths : [];
-  const memberItemBreakdown = analytics?.memberItemBreakdown ?? null;
+  const memberAnalytics = isLoading ? null : analytics;
+  const latestMember = memberAnalytics ? latest(memberAnalytics.rollingMonths) : null;
+  const memberData = memberAnalytics?.selectedMember ? memberAnalytics.rollingMonths : [];
+  const memberItemBreakdown = memberAnalytics?.memberItemBreakdown ?? null;
+  const overallSummary = analytics?.overallRollingSummary;
+  const overallPeriod = overallSummary?.startMonth && overallSummary.endMonth
+    ? `Rolling 12 months: ${overallSummary.startMonth} to ${overallSummary.endMonth}`
+    : "No source period available";
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
@@ -499,22 +507,29 @@ export function MidstateDashboard() {
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
                   <SummaryMetric
                     label="Rolling 12 Qty"
-                    value={number(totalQuantity(analytics.overallRollingMonths))}
+                    value={number(analytics.overallRollingSummary.quantity)}
+                    detail={overallPeriod}
                   />
                   <SummaryMetric
                     label="Latest Month Qty"
                     value={number(latestOverall?.quantity ?? 0)}
-                    detail={latestOverall?.month}
+                    detail={analytics.overallRollingSummary.endMonth ?? "No source period available"}
                   />
                   <SummaryMetric
                     label="Members"
-                    value={number(analytics.kpis.activeMembers)}
+                    value={number(analytics.overallRollingSummary.activeMembers)}
+                    detail={overallPeriod}
                   />
                   <SummaryMetric
                     label="Top Member"
-                    value={analytics.kpis.topMember ?? "N/A"}
+                    value={analytics.overallRollingSummary.topMember ?? "N/A"}
+                    detail={overallPeriod}
                   />
-                  <SummaryMetric label="Top SKU" value={analytics.kpis.topSku ?? "N/A"} />
+                  <SummaryMetric
+                    label="Top SKU"
+                    value={analytics.overallRollingSummary.topSku ?? "N/A"}
+                    detail={overallPeriod}
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -535,7 +550,7 @@ export function MidstateDashboard() {
             >
               Selected Member
             </h2>
-            {analytics.selectedMember ? (
+            {memberAnalytics?.selectedMember ? (
               <Card>
                 <CardHeader>
                   <CardTitle>Selected Member Snapshot</CardTitle>
@@ -543,12 +558,12 @@ export function MidstateDashboard() {
                 <CardContent className="grid gap-3 sm:grid-cols-3">
                   <SummaryMetric
                     label="Member"
-                    value={analytics.selectedMember.memberName}
-                    detail={analytics.selectedMember.memberNumber}
+                    value={memberAnalytics.selectedMember.memberName}
+                    detail={memberAnalytics.selectedMember.memberNumber}
                   />
                   <SummaryMetric
                     label="Rolling 12 Qty"
-                    value={number(totalQuantity(analytics.rollingMonths))}
+                    value={number(totalQuantity(memberAnalytics.rollingMonths))}
                   />
                   <SummaryMetric
                     label="Latest Month Qty"
@@ -560,11 +575,11 @@ export function MidstateDashboard() {
             ) : null}
 
             <RollingChartCard
-              title={chartTitle(analytics)}
+              title={chartTitle(memberAnalytics)}
               data={memberData}
               mode={memberChartMode}
               onModeChange={setMemberChartMode}
-              emptyState="Select a member to view its rolling 12-month trend."
+              emptyState={isLoading ? "Loading member data..." : "Select a member to view its rolling 12-month trend."}
               action={
                 memberItemBreakdown ? (
                   <Button

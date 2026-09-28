@@ -45,9 +45,8 @@ describe("FFH / TV analytical customer grouping", () => {
     expect(result.kpis.ytdRevenue).toBe(830);
     expect(result.topCustomers.find((r) => r.name === group)).toEqual({ name: group, quantity: 28, revenue: 280 });
     expect(result.filterOptions.customers).toEqual([group, "Other", "TRACTOR SUPPLY COMPANY", "TSC-RETAILS"]);
-    expect(result.customerMovement.byPeriod.ytd.declining).toEqual([
-      expect.objectContaining({ customerName: group, currentQuantity: 28, priorQuantity: 347, quantityDiff: -319 }),
-    ]);
+    expect(result.customerMovement.byPeriod.ytd.declining).toEqual([]);
+    expect(result.customerMovement.byPeriod.ytd.summary.quantityGrowth).toBeNull();
     expect(result.customerMovement.byPeriod["08"].declining).toEqual([
       expect.objectContaining({ customerName: group, currentQuantity: 18, priorQuantity: 200, quantityDiff: -182 }),
     ]);
@@ -68,7 +67,7 @@ describe("FFH / TV analytical customer grouping", () => {
     const data = [...rows, row(2025, 6, "Lost customer", 25)];
     const result = summarizeProductYoYRowsForTest(data, { year: 2026, customerName: "Lost customer" });
     expect(result.months).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
-    expect(result.summary).toMatchObject({ currentQuantity: 0, priorQuantity: 25, quantityGrowth: -1 });
+    expect(result.summary).toMatchObject({ currentQuantity: 0, priorQuantity: 25, quantityGrowth: null });
   });
 
   it("honors an explicit month window for both years", () => {

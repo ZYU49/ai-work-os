@@ -11,6 +11,7 @@ import {
 } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { AnalyticsDashboard } from "@/components/analytics/analytics-dashboard";
+import type { SalesReportingPeriod } from "@/services/analytics/reporting-period";
 
 vi.mock("recharts", () => ({
   ResponsiveContainer: ({ children }: { children: React.ReactNode }) => (
@@ -27,9 +28,19 @@ vi.mock("recharts", () => ({
   Line: () => null,
 }));
 
-function createAnalyticsResponse(quantity: number, customerName = "Acme Tire") {
+function reportingPeriod(overrides: Partial<SalesReportingPeriod> = {}): SalesReportingPeriod {
+  return {
+    currentYear: 2026, priorYear: 2025, startMonth: 1, endMonth: 5,
+    months: [1, 2, 3, 4, 5], kind: "ytd",
+    availableCurrentMonths: [1, 2, 3, 4, 5], availablePriorMonths: [1, 2, 3, 4, 5],
+    missingCurrentMonths: [], missingPriorMonths: [], ...overrides,
+  };
+}
+
+function createAnalyticsResponse(quantity: number, customerName = "Acme Tire", period = reportingPeriod()) {
   return {
     analytics: {
+      period,
       kpis: {
         ytdQuantity: quantity,
         ytdRevenue: quantity * 100,
@@ -38,7 +49,7 @@ function createAnalyticsResponse(quantity: number, customerName = "Acme Tire") {
       },
       monthly: [
         {
-          month: "2026-05",
+          month: `${period.currentYear}-05`,
           quantity,
           revenue: quantity * 100,
           momQuantityGrowth: null,
@@ -51,8 +62,8 @@ function createAnalyticsResponse(quantity: number, customerName = "Acme Tire") {
         {
           month: "05",
           monthLabel: "May",
-          currentYear: 2026,
-          priorYear: 2025,
+          currentYear: period.currentYear,
+          priorYear: period.priorYear,
           currentQuantity: quantity,
           priorQuantity: Math.round(quantity / 2),
           quantityGrowth: 1,
@@ -62,6 +73,8 @@ function createAnalyticsResponse(quantity: number, customerName = "Acme Tire") {
         },
       ],
       customerMovement: {
+        currentYear: period.currentYear,
+        priorYear: period.priorYear,
         defaultPeriod: "05",
         periods: [
           { value: "ytd", label: "YTD" },
@@ -69,6 +82,8 @@ function createAnalyticsResponse(quantity: number, customerName = "Acme Tire") {
         ],
         byPeriod: {
           ytd: {
+            currentAvailable: true,
+            priorAvailable: true,
             period: "ytd",
             label: "YTD",
             summary: {
@@ -98,6 +113,8 @@ function createAnalyticsResponse(quantity: number, customerName = "Acme Tire") {
             ],
           },
           "05": {
+            currentAvailable: true,
+            priorAvailable: true,
             period: "05",
             label: "May",
             summary: {
@@ -135,7 +152,7 @@ function createAnalyticsResponse(quantity: number, customerName = "Acme Tire") {
       topSkus: [{ name: "SKU-1", quantity, revenue: quantity * 100 }],
       salespeople: [{ name: "Jamie", quantity, revenue: quantity * 100 }],
       filterOptions: {
-        years: ["2025", "2026"],
+        years: [String(period.priorYear), String(period.currentYear)],
         salespeople: ["Jamie"],
         customers: [customerName],
         categories: ["PCR"],
@@ -160,6 +177,7 @@ describe("AnalyticsDashboard", () => {
       ok: true,
       json: async () => ({
         analytics: {
+          period: reportingPeriod({endMonth: 6, months: [1, 2, 3, 4, 5, 6], availableCurrentMonths: [1, 2, 3, 4, 5, 6], availablePriorMonths: [1, 2, 3, 4, 5, 6]}),
           kpis: {
             ytdQuantity: 1200,
             ytdRevenue: 456000,
@@ -213,6 +231,8 @@ describe("AnalyticsDashboard", () => {
             },
           ],
           customerMovement: {
+            currentYear: 2026,
+            priorYear: 2025,
             defaultPeriod: "08",
             periods: [
               { value: "ytd", label: "YTD" },
@@ -220,6 +240,8 @@ describe("AnalyticsDashboard", () => {
             ],
             byPeriod: {
               ytd: {
+                currentAvailable: true,
+                priorAvailable: true,
                 period: "ytd",
                 label: "YTD",
                 summary: {
@@ -262,6 +284,8 @@ describe("AnalyticsDashboard", () => {
                 ],
               },
               "08": {
+                currentAvailable: true,
+                priorAvailable: true,
                 period: "08",
                 label: "Aug",
                 summary: {
@@ -456,7 +480,7 @@ describe("AnalyticsDashboard", () => {
     await act(async () => {
       resolveFiltered?.({
         ok: true,
-        json: async () => createAnalyticsResponse(900, "Beta Tire"),
+        json: async () => createAnalyticsResponse(900, "Beta Tire", reportingPeriod({currentYear: 2025, priorYear: 2024})),
       });
     });
 
@@ -476,10 +500,12 @@ describe("AnalyticsDashboard", () => {
   });
 
   test("applies month range filters to analytics requests", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
+    const fetchMock = vi.fn().mockImplementation(async (url: string) => ({
       ok: true,
-      json: async () => createAnalyticsResponse(1200),
-    });
+      json: async () => createAnalyticsResponse(1200, "Acme Tire", reportingPeriod(
+        url.includes("startMonth=2") ? {currentYear: Number(currentYear), priorYear: Number(currentYear) - 1, kind: "period", startMonth: 2, endMonth: 5, months: [2, 3, 4, 5], availableCurrentMonths: [2, 3, 4, 5], availablePriorMonths: [2, 3, 4, 5]} : {},
+      )),
+    }));
     vi.stubGlobal("fetch", fetchMock);
 
     render(<AnalyticsDashboard />);
@@ -505,6 +531,95 @@ describe("AnalyticsDashboard", () => {
       ),
     );
 
-    expect(await screen.findAllByText(`Scope: ${currentYear} Feb-May`)).not.toHaveLength(0);
+    expect(await screen.findAllByText(`Scope: ${currentYear} Period Feb-May`)).not.toHaveLength(0);
+  });
+
+  test.each([
+    ["month", 5, 5, "Month", "May"],
+    ["period", 2, 5, "Period", "Feb-May"],
+    ["ytd", 1, 8, "YTD", "Jan-Aug"],
+  ] as const)("uses resolved %s metadata for labels and unchanged totals", async (kind, startMonth, endMonth, label, range) => {
+    const months = Array.from({length: endMonth - startMonth + 1}, (_, index) => startMonth + index);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ok: true, json: async () => createAnalyticsResponse(1200, "Acme Tire", reportingPeriod({kind, currentYear: 2024, priorYear: 2023, startMonth, endMonth, months, availableCurrentMonths: months, availablePriorMonths: months}))}));
+    render(<AnalyticsDashboard />);
+    expect(await screen.findByText(`${label} Quantity`)).toBeVisible();
+    expect(screen.getByText(`${label} Sales`)).toBeVisible();
+    expect(screen.getAllByText(`Scope: 2024 ${label} ${range}`).length).toBeGreaterThan(0);
+    expect(screen.getByText(`${label} Quantity`).parentElement).toHaveTextContent("1,200");
+    expect(screen.getByText(`${label} Sales`).parentElement).toHaveTextContent("$120,000");
+  });
+
+  test.each([
+    {available: [1, 3], missing: [2, 4, 5], value: "1,200", detail: "Partial data: 2 of 5 months available"},
+    {available: [1, 3, 8], missing: [2, 4, 5], value: "1,200", detail: "Partial data: 2 of 5 months available"},
+    {available: [], missing: [1, 2, 3, 4, 5], value: "Unavailable", detail: "Data unavailable for 2026"},
+    {available: [8], missing: [1, 2, 3, 4, 5], value: "Unavailable", detail: "Data unavailable for 2026"},
+  ])("labels incomplete totals with $detail", async ({available, missing, value, detail}) => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ok: true, json: async () => createAnalyticsResponse(available.length ? 1200 : 0, "Acme Tire", reportingPeriod({availableCurrentMonths: available, missingCurrentMonths: missing}))}));
+    render(<AnalyticsDashboard />);
+    const label = await screen.findByText("YTD Quantity");
+    expect(label.parentElement).toHaveTextContent(value);
+    expect(label.parentElement).toHaveTextContent(detail);
+    expect(screen.getByText("YTD Sales").parentElement).toHaveTextContent(detail);
+  });
+
+  test("shows an unavailable scope when the response has no current-year months", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ok: true, json: async () => createAnalyticsResponse(0, "Acme Tire", reportingPeriod({endMonth: 0, months: [], availableCurrentMonths: [], missingCurrentMonths: []}))}));
+    render(<AnalyticsDashboard />);
+    expect(await screen.findAllByText("Scope: 2026 YTD - data unavailable")).not.toHaveLength(0);
+    expect(screen.getByText("YTD Quantity").parentElement).toHaveTextContent("Unavailable");
+  });
+
+  test("hides resolved results immediately on filter change and retains options", async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce({ok: true, json: async () => createAnalyticsResponse(1200)})
+      .mockImplementation(() => new Promise(() => {}));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<AnalyticsDashboard />);
+    await screen.findByText("YTD Quantity");
+    fireEvent.change(screen.getByLabelText("Year"), {target: {value: "2025"}});
+    expect(screen.getByText("Loading sales analytics")).toBeVisible();
+    expect(screen.queryByText("YTD Quantity")).not.toBeInTheDocument();
+    expect(screen.queryByText("Customer Movement")).not.toBeInTheDocument();
+    expect(screen.queryByText("Top Customers")).not.toBeInTheDocument();
+    expect(screen.getByRole("option", {name: "Acme Tire"})).toBeInTheDocument();
+  });
+
+  test("retains known years for 2026 -> 2025 -> 2026 without retaining obsolete customer options", async () => {
+    const fetchMock = vi.fn().mockImplementation(async (url: string) => {
+      const year = Number(new URL(url, "http://localhost").searchParams.get("year"));
+      return {ok: true, json: async () => createAnalyticsResponse(1200, year === 2025 ? "Prior Customer" : "Current Customer", reportingPeriod({currentYear: year, priorYear: year - 1}))};
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<AnalyticsDashboard />);
+    await screen.findByText("YTD Quantity");
+    fireEvent.change(screen.getByLabelText("Year"), {target: {value: "2025"}});
+    await screen.findByRole("option", {name: "Prior Customer"});
+    expect(screen.getByRole("option", {name: "2026"})).toBeInTheDocument();
+    expect(screen.getByRole("option", {name: "2024"})).toBeInTheDocument();
+    expect(screen.queryByRole("option", {name: "Current Customer"})).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Year"), {target: {value: "2026"}});
+    await screen.findByRole("option", {name: "Current Customer"});
+    expect(screen.getByLabelText("Year")).toHaveValue("2026");
+    expect(fetchMock).toHaveBeenLastCalledWith("/api/analytics/sales?year=2026", expect.objectContaining({cache: "no-store"}));
+    expect(screen.queryByRole("option", {name: "Prior Customer"})).not.toBeInTheDocument();
+    expect(screen.getByRole("option", {name: "2024"})).toBeInTheDocument();
+  });
+
+  test("invalidates the in-flight request before the replacement timer starts", async () => {
+    let resolveInitial!: (value: unknown) => void;
+    const fetchMock = vi.fn().mockImplementation(() => new Promise((resolve) => {resolveInitial = resolve;}));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<AnalyticsDashboard />);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    vi.useFakeTimers();
+    try {
+      fireEvent.change(screen.getByLabelText("Year"), {target: {value: "2025"}});
+      expect(fetchMock.mock.calls[0][1].signal.aborted).toBe(true);
+      await act(async () => {resolveInitial({ok: true, json: async () => createAnalyticsResponse(1200)});});
+      expect(screen.queryByText("YTD Quantity")).not.toBeInTheDocument();
+      expect(screen.getByText("Loading sales analytics")).toBeVisible();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

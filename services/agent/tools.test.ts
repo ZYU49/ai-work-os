@@ -157,6 +157,18 @@ describe("agent safe tools", () => {
 
   it("reads sales analytics through the read-only agent boundary", async () => {
     vi.mocked(readSalesAnalytics).mockResolvedValue({
+      period: {
+        currentYear: 2026,
+        priorYear: 2025,
+        startMonth: 1,
+        endMonth: 6,
+        months: [1, 2, 3, 4, 5, 6],
+        kind: "ytd",
+        availableCurrentMonths: [1, 2, 3, 4, 5, 6],
+        availablePriorMonths: [1, 2, 3, 4, 5, 6],
+        missingCurrentMonths: [],
+        missingPriorMonths: [],
+      },
       kpis: {
         ytdQuantity: 711090,
         ytdRevenue: 21365036,
@@ -164,6 +176,14 @@ describe("agent safe tools", () => {
         activeCustomers: 27,
       },
       monthly: [],
+      yoyComparison: [],
+      customerMovement: {
+        currentYear: 2026,
+        priorYear: 2025,
+        defaultPeriod: "ytd",
+        periods: [],
+        byPeriod: {},
+      },
       topCustomers: [{ name: "TRACTOR SUPPLY COMPANY", quantity: 375957, revenue: 0 }],
       topCategories: [{ name: "L&G Tires", quantity: 164237, revenue: 0 }],
       topSkus: [{ name: "WD1030", quantity: 23571, revenue: 0 }],

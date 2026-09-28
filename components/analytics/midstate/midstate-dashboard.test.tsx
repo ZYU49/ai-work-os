@@ -2,6 +2,7 @@
 
 import "@testing-library/jest-dom/vitest";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -114,6 +115,14 @@ function createAnalyticsResponse({
         topSku,
       },
       selectedMember,
+      overallRollingSummary: {
+        startMonth: `${priorYear}-06`,
+        endMonth: `${currentYear}-05`,
+        quantity: 14757,
+        activeMembers: 21,
+        topMember,
+        topSku,
+      },
       rollingMonths,
       overallRollingMonths: rollingMonths.map((point) => ({
         ...point,
@@ -289,6 +298,97 @@ describe("MidstateDashboard", () => {
         ),
       ).toBe(true),
     );
+  });
+
+  test("member selection and reset cannot change the overall summary or its periods", async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      const selected = url.includes("memberNumber=atwood");
+      const response = createAnalyticsResponse({
+        selectedMember: selected ? { memberNumber: "atwood", memberName: "Atwood" } : null,
+      });
+      response.analytics.filterOptions.members.push({ value: "atwood", label: "Atwood" });
+      response.analytics.overallRollingSummary = {
+        startMonth: "2025-09", endMonth: "2026-08", quantity: 125012,
+        activeMembers: 21, topMember: "Rolling Leader", topSku: "ROLLING-SKU",
+      };
+      response.analytics.overallRollingMonths = [
+        { month: "2025-09", quantity: 105012, activeMembers: 21, topMember: "Rolling Leader", topSku: "ROLLING-SKU" },
+        { month: "2026-08", quantity: 20000, activeMembers: 1, topMember: "Atwood", topSku: "ATWOOD-SKU" },
+      ];
+      response.analytics.rollingMonths = [{ month: "2026-08", quantity: selected ? 20000 : 125012 }];
+      response.analytics.kpis.activeMembers = selected ? 1 : 20;
+      response.analytics.kpis.topMember = selected ? "Atwood" : "YTD Leader";
+      response.analytics.kpis.topSku = selected ? "ATWOOD-SKU" : "YTD-SKU";
+      return { ok: true, json: async () => response };
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<MidstateDashboard />);
+    const overall = await screen.findByRole("region", { name: "Midstate Overall" });
+    const summary = overall.textContent;
+
+    fireEvent.change(screen.getByLabelText("Member"), { target: { value: "atwood" } });
+    await screen.findByText("Atwood Rolling 12 Months");
+    expect(overall.textContent).toBe(summary);
+    expect(within(overall).getByText("21")).toBeVisible();
+    expect(within(overall).getByText("125,012")).toBeVisible();
+    expect(within(overall).getByText("Rolling Leader")).toBeVisible();
+    expect(within(overall).getByText("ROLLING-SKU")).toBeVisible();
+    expect(within(overall).getAllByText(/2025-09 to 2026-08/).length).toBeGreaterThan(0);
+    expect(within(overall).getByText(/2026-08 sell-through is 20,000 units/)).toHaveTextContent(/Rolling 12 months.*Rolling Leader.*ROLLING-SKU/);
+    const member = screen.getByRole("region", { name: "Selected Member" });
+    expect(within(member).getByText("Atwood")).toBeVisible();
+    expect(within(member).getAllByText("20,000")).toHaveLength(2);
+
+    fireEvent.click(screen.getByRole("button", { name: "Reset Filters" }));
+    await waitFor(() => expect(screen.queryByText("Loading Midstate analytics")).not.toBeInTheDocument());
+    expect(screen.queryByText("Selected Member Snapshot")).not.toBeInTheDocument();
+    expect(overall.textContent).toBe(summary);
+  });
+
+  test("hides stale selected snapshot, chart, and breakdown while a new member loads", async () => {
+    const response = createAnalyticsResponse({ selectedMember: { memberNumber: "82801", memberName: "Bomgaars Supply, Inc." } });
+    response.analytics.filterOptions.members.push({ value: "atwood", label: "Atwood" });
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => response })
+      .mockImplementationOnce(() => new Promise(() => {})));
+    render(<MidstateDashboard />);
+    fireEvent.click(await screen.findByRole("button", { name: "View Items" }));
+    fireEvent.change(screen.getByLabelText("Member"), { target: { value: "atwood" } });
+
+    expect(screen.getByText("Loading Midstate analytics")).toBeVisible();
+    expect(screen.queryByText("Selected Member Snapshot")).not.toBeInTheDocument();
+    expect(screen.queryByText("Bomgaars Supply, Inc. Rolling 12 Months")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "View Items" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByText("Executive Summary")).toBeVisible();
+  });
+
+  test("ignores a previous member response before the next scheduled request starts", async () => {
+    const initial = createAnalyticsResponse();
+    initial.analytics.filterOptions.members.push({ value: "atwood", label: "Atwood" });
+    let resolvePrevious!: (response: unknown) => void;
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => initial })
+      .mockImplementationOnce(() => new Promise((resolve) => { resolvePrevious = resolve; }));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<MidstateDashboard />);
+    await screen.findByText("Executive Summary");
+    fireEvent.change(screen.getByLabelText("Member"), { target: { value: "82801" } });
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+
+    vi.useFakeTimers();
+    try {
+      fireEvent.change(screen.getByLabelText("Member"), { target: { value: "atwood" } });
+      await act(async () => {
+        resolvePrevious({ ok: true, json: async () => createAnalyticsResponse({
+          selectedMember: { memberNumber: "82801", memberName: "Bomgaars Supply, Inc." },
+        }) });
+      });
+      expect(screen.queryByText("Selected Member Snapshot")).not.toBeInTheDocument();
+      expect(screen.getByText("Loading Midstate analytics")).toBeVisible();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   test("groups overall summary before selected member details", async () => {

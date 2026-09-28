@@ -16,6 +16,8 @@ export type CustomerMovementRow = {
 };
 
 export type CustomerMovementData = {
+  currentYear: number;
+  priorYear: number;
   defaultPeriod: string;
   periods: Array<{ value: string; label: string }>;
   byPeriod: Record<
@@ -23,6 +25,8 @@ export type CustomerMovementData = {
     {
       period: string;
       label: string;
+      currentAvailable: boolean;
+      priorAvailable: boolean;
       summary: {
         currentQuantity: number;
         priorQuantity: number;
@@ -60,7 +64,12 @@ function percent(value: number | null) {
       }).format(value);
 }
 
-function movementRowsTable(rows: CustomerMovementRow[], emptyText: string) {
+function movementRowsTable(
+  rows: CustomerMovementRow[],
+  emptyText: string,
+  currentYear: number,
+  priorYear: number,
+) {
   if (rows.length === 0) {
     return <p className="px-4 py-6 text-sm text-zinc-500">{emptyText}</p>;
   }
@@ -71,8 +80,8 @@ function movementRowsTable(rows: CustomerMovementRow[], emptyText: string) {
         <thead>
           <tr className="border-b border-zinc-100 text-left text-xs uppercase text-zinc-500">
             <th className="px-4 py-3 font-medium">Customer</th>
-            <th className="px-4 py-3 text-right font-medium">2026 Qty</th>
-            <th className="px-4 py-3 text-right font-medium">2025 Qty</th>
+            <th className="px-4 py-3 text-right font-medium">{currentYear} Qty</th>
+            <th className="px-4 py-3 text-right font-medium">{priorYear} Qty</th>
             <th className="px-4 py-3 text-right font-medium">Qty Diff</th>
             <th className="px-4 py-3 text-right font-medium">YoY</th>
             <th className="px-4 py-3 text-right font-medium">Sales Diff</th>
@@ -141,11 +150,13 @@ export function CustomerMovement({
   if (!selectedMovement) {
     return null;
   }
+  const canCompare = selectedMovement.currentAvailable && selectedMovement.priorAvailable;
+  const unavailableComparison = "Comparison unavailable: incomplete period coverage.";
 
   return (
     <ChartCard
       title="Customer Movement"
-      subtitle={`Default view follows the latest loaded month: ${selectedMovement.label}`}
+      subtitle={`${data.currentYear} vs ${data.priorYear} - ${selectedMovement.label}`}
       action={
         <label className="flex min-w-40 flex-col gap-1 text-xs font-medium text-zinc-600">
           Movement Period
@@ -165,15 +176,15 @@ export function CustomerMovement({
     >
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-md border border-zinc-200 bg-white p-4">
-          <p className="text-xs font-medium uppercase text-zinc-500">2026 Qty</p>
+          <p className="text-xs font-medium uppercase text-zinc-500">{data.currentYear} Qty</p>
           <p className="mt-2 text-xl font-semibold text-zinc-950">
-            {number(selectedMovement.summary.currentQuantity)}
+            {selectedMovement.currentAvailable ? number(selectedMovement.summary.currentQuantity) : "Unavailable"}
           </p>
         </div>
         <div className="rounded-md border border-zinc-200 bg-white p-4">
-          <p className="text-xs font-medium uppercase text-zinc-500">2025 Qty</p>
+          <p className="text-xs font-medium uppercase text-zinc-500">{data.priorYear} Qty</p>
           <p className="mt-2 text-xl font-semibold text-zinc-950">
-            {number(selectedMovement.summary.priorQuantity)}
+            {selectedMovement.priorAvailable ? number(selectedMovement.summary.priorQuantity) : "Unavailable"}
           </p>
         </div>
         <div className="rounded-md border border-zinc-200 bg-white p-4">
@@ -182,15 +193,15 @@ export function CustomerMovement({
           </p>
           <p
             className={`mt-2 text-xl font-semibold ${
-              selectedMovement.summary.quantityDiff < 0
+              !canCompare ? "text-zinc-500" : selectedMovement.summary.quantityDiff < 0
                 ? "text-red-600"
                 : "text-emerald-700"
             }`}
           >
-            Qty Diff {number(selectedMovement.summary.quantityDiff)}
+            Qty Diff {canCompare ? number(selectedMovement.summary.quantityDiff) : "Unavailable"}
           </p>
           <p className="mt-1 text-xs text-zinc-500">
-            YoY {percent(selectedMovement.summary.quantityGrowth)}
+            YoY {percent(canCompare ? selectedMovement.summary.quantityGrowth : null)}
           </p>
         </div>
         <div className="rounded-md border border-zinc-200 bg-white p-4">
@@ -199,15 +210,15 @@ export function CustomerMovement({
           </p>
           <p
             className={`mt-2 text-xl font-semibold ${
-              selectedMovement.summary.revenueDiff < 0
+              !canCompare ? "text-zinc-500" : selectedMovement.summary.revenueDiff < 0
                 ? "text-red-600"
                 : "text-emerald-700"
             }`}
           >
-            Sales Diff {money(selectedMovement.summary.revenueDiff)}
+            Sales Diff {canCompare ? money(selectedMovement.summary.revenueDiff) : "Unavailable"}
           </p>
           <p className="mt-1 text-xs text-zinc-500">
-            YoY {percent(selectedMovement.summary.revenueGrowth)}
+            YoY {percent(canCompare ? selectedMovement.summary.revenueGrowth : null)}
           </p>
         </div>
       </div>
@@ -220,8 +231,10 @@ export function CustomerMovement({
             </h3>
           </div>
           {movementRowsTable(
-            selectedMovement.declining,
-            "No declining customers in this period.",
+            canCompare ? selectedMovement.declining : [],
+            canCompare ? "No declining customers in this period." : unavailableComparison,
+            data.currentYear,
+            data.priorYear,
           )}
         </div>
         <div className="overflow-hidden rounded-md border border-zinc-200">
@@ -231,8 +244,10 @@ export function CustomerMovement({
             </h3>
           </div>
           {movementRowsTable(
-            selectedMovement.growing,
-            "No growing customers in this period.",
+            canCompare ? selectedMovement.growing : [],
+            canCompare ? "No growing customers in this period." : unavailableComparison,
+            data.currentYear,
+            data.priorYear,
           )}
         </div>
       </div>
