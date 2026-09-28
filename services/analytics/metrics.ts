@@ -71,6 +71,36 @@ type SalesAnalyticsYoYComparison = {
   revenueGrowth: number | null;
 };
 
+type SalesAnalyticsCustomerMovementRow = {
+  customerName: string;
+  salesperson: string | null;
+  currentQuantity: number;
+  priorQuantity: number;
+  quantityDiff: number;
+  quantityGrowth: number | null;
+  currentRevenue: number;
+  priorRevenue: number;
+  revenueDiff: number;
+  revenueGrowth: number | null;
+};
+
+type SalesAnalyticsCustomerMovementPeriod = {
+  period: string;
+  label: string;
+  summary: {
+    currentQuantity: number;
+    priorQuantity: number;
+    quantityDiff: number;
+    quantityGrowth: number | null;
+    currentRevenue: number;
+    priorRevenue: number;
+    revenueDiff: number;
+    revenueGrowth: number | null;
+  };
+  declining: SalesAnalyticsCustomerMovementRow[];
+  growing: SalesAnalyticsCustomerMovementRow[];
+};
+
 export type SalesAnalyticsOverview = {
   kpis: {
     ytdQuantity: number;
@@ -80,6 +110,11 @@ export type SalesAnalyticsOverview = {
   };
   monthly: SalesAnalyticsMonthly[];
   yoyComparison: SalesAnalyticsYoYComparison[];
+  customerMovement: {
+    defaultPeriod: string;
+    periods: Array<{ value: string; label: string }>;
+    byPeriod: Record<string, SalesAnalyticsCustomerMovementPeriod>;
+  };
   topCustomers: SalesAnalyticsRanking[];
   topCategories: SalesAnalyticsRanking[];
   topSkus: SalesAnalyticsRanking[];
@@ -159,6 +194,110 @@ function ranking(map: Map<string, { quantity: number; revenue: number }>) {
     .map(([name, values]) => ({ name, ...values }))
     .sort((a, b) => b.quantity - a.quantity)
     .slice(0, 20);
+}
+
+function customerMovementPeriod(
+  currentRows: SalesMetricRow[],
+  priorRows: SalesMetricRow[],
+  period: string,
+  label: string,
+): SalesAnalyticsCustomerMovementPeriod {
+  const customers = new Map<
+    string,
+    {
+      currentQuantity: number;
+      priorQuantity: number;
+      currentRevenue: number;
+      priorRevenue: number;
+      salespeople: Map<string, number>;
+    }
+  >();
+
+  function ensureCustomer(customerName: string) {
+    const current =
+      customers.get(customerName) ??
+      {
+        currentQuantity: 0,
+        priorQuantity: 0,
+        currentRevenue: 0,
+        priorRevenue: 0,
+        salespeople: new Map<string, number>(),
+      };
+    customers.set(customerName, current);
+    return current;
+  }
+
+  for (const row of currentRows) {
+    const customer = ensureCustomer(row.customerName);
+    customer.currentQuantity += row.quantity;
+    customer.currentRevenue += row.revenue;
+    if (row.salesperson) {
+      customer.salespeople.set(
+        row.salesperson,
+        (customer.salespeople.get(row.salesperson) ?? 0) + row.quantity,
+      );
+    }
+  }
+
+  for (const row of priorRows) {
+    const customer = ensureCustomer(row.customerName);
+    customer.priorQuantity += row.quantity;
+    customer.priorRevenue += row.revenue;
+    if (row.salesperson) {
+      customer.salespeople.set(
+        row.salesperson,
+        (customer.salespeople.get(row.salesperson) ?? 0) + row.quantity,
+      );
+    }
+  }
+
+  const rows = [...customers.entries()].map(([customerName, values]) => {
+    const quantityDiff = values.currentQuantity - values.priorQuantity;
+    const revenueDiff = values.currentRevenue - values.priorRevenue;
+    const salesperson =
+      [...values.salespeople.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ??
+      null;
+
+    return {
+      customerName,
+      salesperson,
+      currentQuantity: values.currentQuantity,
+      priorQuantity: values.priorQuantity,
+      quantityDiff,
+      quantityGrowth: calculateGrowth(values.currentQuantity, values.priorQuantity),
+      currentRevenue: values.currentRevenue,
+      priorRevenue: values.priorRevenue,
+      revenueDiff,
+      revenueGrowth: calculateGrowth(values.currentRevenue, values.priorRevenue),
+    };
+  });
+  const currentQuantity = rows.reduce((sum, row) => sum + row.currentQuantity, 0);
+  const priorQuantity = rows.reduce((sum, row) => sum + row.priorQuantity, 0);
+  const currentRevenue = rows.reduce((sum, row) => sum + row.currentRevenue, 0);
+  const priorRevenue = rows.reduce((sum, row) => sum + row.priorRevenue, 0);
+
+  return {
+    period,
+    label,
+    summary: {
+      currentQuantity,
+      priorQuantity,
+      quantityDiff: currentQuantity - priorQuantity,
+      quantityGrowth: calculateGrowth(currentQuantity, priorQuantity),
+      currentRevenue,
+      priorRevenue,
+      revenueDiff: currentRevenue - priorRevenue,
+      revenueGrowth: calculateGrowth(currentRevenue, priorRevenue),
+    },
+    declining: rows
+      .filter((row) => row.quantityDiff < 0)
+      .sort((a, b) => a.quantityDiff - b.quantityDiff)
+      .slice(0, 10),
+    growing: rows
+      .filter((row) => row.quantityDiff > 0)
+      .sort((a, b) => b.quantityDiff - a.quantityDiff)
+      .slice(0, 10),
+  };
 }
 
 function unique(values: Array<string | null | undefined>) {
@@ -260,6 +399,39 @@ export function summarizeSalesRowsForTest(
         revenueGrowth: calculateGrowth(value.revenue, prior?.revenue),
       };
     });
+  const movementMonthKeys = [
+    ...new Set([...monthlyMap.keys(), ...priorMonthlyMap.keys()]),
+  ].sort((a, b) => a.localeCompare(b));
+  const customerMovementPeriods = Object.fromEntries(
+    [
+      [
+        "ytd",
+        customerMovementPeriod(currentRows, priorRows, "ytd", "YTD"),
+      ] as const,
+      ...movementMonthKeys.map((month) => {
+        const [, monthText] = month.split("-");
+        const numericMonth = Number(monthText);
+        const currentMonthRows = currentRows.filter(
+          (row) => row.orderDate.getMonth() + 1 === numericMonth,
+        );
+        const priorMonthRows = priorRows.filter(
+          (row) => row.orderDate.getMonth() + 1 === numericMonth,
+        );
+
+        return [
+          monthText,
+          customerMovementPeriod(
+            currentMonthRows,
+            priorMonthRows,
+            monthText,
+            monthLabel(numericMonth),
+          ),
+        ] as const;
+      }),
+    ],
+  );
+  const defaultMovementPeriod =
+    movementMonthKeys.at(-1)?.split("-")[1] ?? "ytd";
 
   const ytdQuantity = currentRows.reduce((sum, row) => sum + row.quantity, 0);
   const ytdRevenue = currentRows.reduce((sum, row) => sum + row.revenue, 0);
@@ -273,6 +445,20 @@ export function summarizeSalesRowsForTest(
     },
     monthly,
     yoyComparison,
+    customerMovement: {
+      defaultPeriod: defaultMovementPeriod,
+      periods: [
+        { value: "ytd", label: "YTD" },
+        ...movementMonthKeys.map((month) => {
+          const [, monthText] = month.split("-");
+          return {
+            value: monthText,
+            label: monthLabel(Number(monthText)),
+          };
+        }),
+      ],
+      byPeriod: customerMovementPeriods,
+    },
     topCustomers: ranking(customers),
     topCategories: ranking(categories),
     topSkus: ranking(skus),

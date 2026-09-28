@@ -61,6 +61,73 @@ function createAnalyticsResponse(quantity: number, customerName = "Acme Tire") {
           revenueGrowth: 1,
         },
       ],
+      customerMovement: {
+        defaultPeriod: "05",
+        periods: [
+          { value: "ytd", label: "YTD" },
+          { value: "05", label: "May" },
+        ],
+        byPeriod: {
+          ytd: {
+            period: "ytd",
+            label: "YTD",
+            summary: {
+              currentQuantity: quantity,
+              priorQuantity: Math.round(quantity / 2),
+              quantityDiff: Math.round(quantity / 2),
+              quantityGrowth: 1,
+              currentRevenue: quantity * 100,
+              priorRevenue: quantity * 50,
+              revenueDiff: quantity * 50,
+              revenueGrowth: 1,
+            },
+            declining: [],
+            growing: [
+              {
+                customerName,
+                salesperson: "Jamie",
+                currentQuantity: quantity,
+                priorQuantity: Math.round(quantity / 2),
+                quantityDiff: Math.round(quantity / 2),
+                quantityGrowth: 1,
+                currentRevenue: quantity * 100,
+                priorRevenue: quantity * 50,
+                revenueDiff: quantity * 50,
+                revenueGrowth: 1,
+              },
+            ],
+          },
+          "05": {
+            period: "05",
+            label: "May",
+            summary: {
+              currentQuantity: quantity,
+              priorQuantity: Math.round(quantity / 2),
+              quantityDiff: Math.round(quantity / 2),
+              quantityGrowth: 1,
+              currentRevenue: quantity * 100,
+              priorRevenue: quantity * 50,
+              revenueDiff: quantity * 50,
+              revenueGrowth: 1,
+            },
+            declining: [],
+            growing: [
+              {
+                customerName,
+                salesperson: "Jamie",
+                currentQuantity: quantity,
+                priorQuantity: Math.round(quantity / 2),
+                quantityDiff: Math.round(quantity / 2),
+                quantityGrowth: 1,
+                currentRevenue: quantity * 100,
+                priorRevenue: quantity * 50,
+                revenueDiff: quantity * 50,
+                revenueGrowth: 1,
+              },
+            ],
+          },
+        },
+      },
       topCustomers: [
         { name: customerName, quantity, revenue: quantity * 100 },
       ],
@@ -145,6 +212,99 @@ describe("AnalyticsDashboard", () => {
               revenueGrowth: 0.25,
             },
           ],
+          customerMovement: {
+            defaultPeriod: "08",
+            periods: [
+              { value: "ytd", label: "YTD" },
+              { value: "08", label: "Aug" },
+            ],
+            byPeriod: {
+              ytd: {
+                period: "ytd",
+                label: "YTD",
+                summary: {
+                  currentQuantity: 1200,
+                  priorQuantity: 1000,
+                  quantityDiff: 200,
+                  quantityGrowth: 0.2,
+                  currentRevenue: 456000,
+                  priorRevenue: 390000,
+                  revenueDiff: 66000,
+                  revenueGrowth: 0.1692307692,
+                },
+                declining: [
+                  {
+                    customerName: "Decliner Inc",
+                    salesperson: "Allen Meng",
+                    currentQuantity: 100,
+                    priorQuantity: 260,
+                    quantityDiff: -160,
+                    quantityGrowth: -0.6153846154,
+                    currentRevenue: 40000,
+                    priorRevenue: 95000,
+                    revenueDiff: -55000,
+                    revenueGrowth: -0.5789473684,
+                  },
+                ],
+                growing: [
+                  {
+                    customerName: "Grower LLC",
+                    salesperson: "Bella Cui",
+                    currentQuantity: 300,
+                    priorQuantity: 90,
+                    quantityDiff: 210,
+                    quantityGrowth: 2.3333333333,
+                    currentRevenue: 110000,
+                    priorRevenue: 31000,
+                    revenueDiff: 79000,
+                    revenueGrowth: 2.5483870968,
+                  },
+                ],
+              },
+              "08": {
+                period: "08",
+                label: "Aug",
+                summary: {
+                  currentQuantity: 500,
+                  priorQuantity: 650,
+                  quantityDiff: -150,
+                  quantityGrowth: -0.2307692308,
+                  currentRevenue: 180000,
+                  priorRevenue: 230000,
+                  revenueDiff: -50000,
+                  revenueGrowth: -0.2173913043,
+                },
+                declining: [
+                  {
+                    customerName: "Decliner Inc",
+                    salesperson: "Allen Meng",
+                    currentQuantity: 100,
+                    priorQuantity: 260,
+                    quantityDiff: -160,
+                    quantityGrowth: -0.6153846154,
+                    currentRevenue: 40000,
+                    priorRevenue: 95000,
+                    revenueDiff: -55000,
+                    revenueGrowth: -0.5789473684,
+                  },
+                ],
+                growing: [
+                  {
+                    customerName: "Grower LLC",
+                    salesperson: "Bella Cui",
+                    currentQuantity: 300,
+                    priorQuantity: 90,
+                    quantityDiff: 210,
+                    quantityGrowth: 2.3333333333,
+                    currentRevenue: 110000,
+                    priorRevenue: 31000,
+                    revenueDiff: 79000,
+                    revenueGrowth: 2.5483870968,
+                  },
+                ],
+              },
+            },
+          },
           topCustomers: [{ name: "Acme Tire", quantity: 700, revenue: 276000 }],
           topCategories: [{ name: "PCR", quantity: 650, revenue: 250000 }],
           topSkus: [{ name: "SKU-1", quantity: 600, revenue: 240000 }],
@@ -198,8 +358,8 @@ describe("AnalyticsDashboard", () => {
       "aria-pressed",
       "false",
     );
-    expect(screen.getByText("2026 Qty")).toBeVisible();
-    expect(screen.getByText("2025 Qty")).toBeVisible();
+    expect(screen.getAllByText("2026 Qty").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("2025 Qty").length).toBeGreaterThan(0);
     expect(screen.queryByText("2026 Sales")).not.toBeInTheDocument();
     expect(screen.queryByText("2025 Sales")).not.toBeInTheDocument();
 
@@ -213,10 +373,16 @@ describe("AnalyticsDashboard", () => {
       "aria-pressed",
       "true",
     );
-    expect(screen.queryByText("2026 Qty")).not.toBeInTheDocument();
-    expect(screen.queryByText("2025 Qty")).not.toBeInTheDocument();
     expect(screen.getByText("2026 Sales")).toBeVisible();
     expect(screen.getByText("2025 Sales")).toBeVisible();
+    expect(screen.getByText("Customer Movement")).toBeVisible();
+    expect(screen.getByLabelText("Movement Period")).toHaveValue("08");
+    expect(screen.getByText("Qty Diff -150")).toBeVisible();
+    expect(screen.getByText("Sales Diff -$50,000")).toBeVisible();
+    expect(screen.getByText("Top Declining Customers")).toBeVisible();
+    expect(screen.getByText("Top Growing Customers")).toBeVisible();
+    expect(screen.getByText("Decliner Inc")).toBeVisible();
+    expect(screen.getByText("Grower LLC")).toBeVisible();
     expect(screen.getByRole("button", { name: /refresh/i })).toBeEnabled();
     expect(screen.getAllByText("Acme Tire").length).toBeGreaterThan(0);
     expect(screen.getByText("Salesperson Split")).toBeVisible();

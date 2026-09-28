@@ -3,6 +3,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ChartCard } from "@/components/analytics/chart-card";
+import {
+  CustomerMovement,
+  type CustomerMovementData,
+} from "@/components/analytics/customer-movement";
 import { KpiCard } from "@/components/analytics/kpi-card";
 import { MonthlyTrendChart } from "@/components/analytics/monthly-trend-chart";
 import { RankingBars } from "@/components/analytics/ranking-bars";
@@ -40,6 +44,7 @@ type SalesAnalytics = {
     priorRevenue: number | null;
     revenueGrowth: number | null;
   }>;
+  customerMovement: CustomerMovementData;
   topCustomers: Array<{ name: string; quantity: number; revenue: number }>;
   topCategories: Array<{ name: string; quantity: number; revenue: number }>;
   topSkus: Array<{ name: string; quantity: number; revenue: number }>;
@@ -123,6 +128,7 @@ export function AnalyticsDashboard() {
   const [analytics, setAnalytics] = useState<SalesAnalytics | null>(null);
   const [filters, setFilters] = useState<SalesDashboardFilters>(defaultFilters);
   const [yoyMetric, setYoyMetric] = useState<YoYMetric>("quantity");
+  const [movementPeriod, setMovementPeriod] = useState("ytd");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -165,6 +171,7 @@ export function AnalyticsDashboard() {
       }
 
       setAnalytics(data.analytics);
+      setMovementPeriod(data.analytics.customerMovement.defaultPeriod);
     } catch (loadError) {
       if (
         abortController.signal.aborted ||
@@ -326,6 +333,12 @@ export function AnalyticsDashboard() {
               metric={yoyMetric === "quantity" ? "quantity" : "revenue"}
             />
           </ChartCard>
+
+          <CustomerMovement
+            data={analytics.customerMovement}
+            period={movementPeriod}
+            onPeriodChange={setMovementPeriod}
+          />
 
           <div className="grid min-w-0 gap-6 lg:grid-cols-2">
             <ChartCard title="Top Customers" subtitle={currentScopeLabel}>

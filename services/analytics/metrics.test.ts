@@ -91,6 +91,99 @@ describe("sales metrics", () => {
     ]);
   });
 
+  it("summarizes customer movement by month and YTD", () => {
+    const summary = summarizeSalesRowsForTest(
+      [
+        {
+          orderDate: new Date("2025-08-10"),
+          customerName: "Declining Customer",
+          sku: "SKU-1",
+          category: "L&G",
+          salesperson: "Allen Meng",
+          quantity: 100,
+          revenue: 1000,
+        },
+        {
+          orderDate: new Date("2026-08-10"),
+          customerName: "Declining Customer",
+          sku: "SKU-1",
+          category: "L&G",
+          salesperson: "Allen Meng",
+          quantity: 40,
+          revenue: 500,
+        },
+        {
+          orderDate: new Date("2025-08-11"),
+          customerName: "Growing Customer",
+          sku: "SKU-2",
+          category: "Tube",
+          salesperson: "Bella Cui",
+          quantity: 20,
+          revenue: 400,
+        },
+        {
+          orderDate: new Date("2026-08-11"),
+          customerName: "Growing Customer",
+          sku: "SKU-2",
+          category: "Tube",
+          salesperson: "Bella Cui",
+          quantity: 75,
+          revenue: 900,
+        },
+        {
+          orderDate: new Date("2026-07-11"),
+          customerName: "Growing Customer",
+          sku: "SKU-3",
+          category: "Tube",
+          salesperson: "Bella Cui",
+          quantity: 10,
+          revenue: 100,
+        },
+      ],
+      { year: 2026, startMonth: 1, endMonth: 8 },
+    );
+
+    expect(summary.customerMovement.defaultPeriod).toBe("08");
+    expect(summary.customerMovement.periods.map((period) => period.value)).toEqual([
+      "ytd",
+      "07",
+      "08",
+    ]);
+    expect(summary.customerMovement.byPeriod["08"]).toMatchObject({
+      period: "08",
+      summary: {
+        currentQuantity: 115,
+        priorQuantity: 120,
+        quantityDiff: -5,
+        currentRevenue: 1400,
+        priorRevenue: 1400,
+        revenueDiff: 0,
+      },
+      declining: [
+        {
+          customerName: "Declining Customer",
+          salesperson: "Allen Meng",
+          currentQuantity: 40,
+          priorQuantity: 100,
+          quantityDiff: -60,
+          quantityGrowth: -0.6,
+          revenueDiff: -500,
+        },
+      ],
+      growing: [
+        {
+          customerName: "Growing Customer",
+          salesperson: "Bella Cui",
+          currentQuantity: 75,
+          priorQuantity: 20,
+          quantityDiff: 55,
+          quantityGrowth: 2.75,
+          revenueDiff: 500,
+        },
+      ],
+    });
+  });
+
   it("returns null month-over-month growth when the immediate prior calendar month is missing", () => {
     const summary = summarizeSalesRowsForTest(
       [
