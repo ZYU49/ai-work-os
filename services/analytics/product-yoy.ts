@@ -1,4 +1,5 @@
 import type { SalesRecord } from "@prisma/client";
+import { analyticsCustomerFilter, analyticsCustomerName } from "./customer-groups";
 import {
   type SalesAnalyticsFilters,
   salesAnalyticsFiltersSchema,
@@ -87,25 +88,24 @@ export function summarizeProductYoYRowsForTest(
         row.orderDate.getFullYear() === priorYear,
     )
     .filter(
-    (row) =>
-      !parsedFilters.customerName ||
-      row.customerName === parsedFilters.customerName,
+      (row) =>
+        !parsedFilters.customerName ||
+        analyticsCustomerName(row.customerName) === analyticsCustomerName(parsedFilters.customerName),
     );
-  const currentRows = scopedRows.filter(
+  // Use the report's shared YTD window, not just months when this customer bought.
+  const reportCurrentRows = optionRows.filter(
     (row) => row.orderDate.getFullYear() === currentYear,
   );
-  const currentMonths = new Set(
-    currentRows.map((row) => row.orderDate.getMonth() + 1),
+  const latestReportMonth = reportCurrentRows.reduce(
+    (latest, row) => Math.max(latest, row.orderDate.getMonth() + 1),
+    0,
   );
-  const explicitStartMonth = parsedFilters.startMonth;
-  const explicitEndMonth = parsedFilters.endMonth;
-  const months =
-    explicitStartMonth && explicitEndMonth
-      ? Array.from(
-          { length: explicitEndMonth - explicitStartMonth + 1 },
-          (_, index) => explicitStartMonth + index,
-        )
-      : [...currentMonths].sort((a, b) => a - b);
+  const startMonth = parsedFilters.startMonth ?? 1;
+  const endMonth = parsedFilters.endMonth ?? latestReportMonth;
+  const months = Array.from(
+    { length: Math.max(0, endMonth - startMonth + 1) },
+    (_, index) => startMonth + index,
+  );
   const allowedMonths = new Set(months);
   const currentQuantityBySku = new Map<string, number>();
   const priorQuantityBySku = new Map<string, number>();
@@ -198,7 +198,7 @@ export function summarizeProductYoYRowsForTest(
       ).length,
     },
     filterOptions: {
-      customers: unique(optionRows.map((row) => row.customerName)),
+      customers: unique(optionRows.map((row) => analyticsCustomerName(row.customerName))),
     },
     rows: outputRows,
   };
@@ -242,7 +242,7 @@ export async function getProductYoYAnalytics(
       where: {
         orderDate: dateWhere,
         ...(filters.salesperson ? { salesperson: filters.salesperson } : {}),
-        ...(filters.customerName ? { customerName: filters.customerName } : {}),
+        ...(filters.customerName ? { customerName: analyticsCustomerFilter(filters.customerName) } : {}),
         ...(filters.category ? { category: filters.category } : {}),
         ...(filters.sku ? { sku: filters.sku } : {}),
         ...(filters.shipToState ? { shipToState: filters.shipToState } : {}),

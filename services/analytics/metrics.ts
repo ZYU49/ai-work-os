@@ -1,5 +1,6 @@
 import type { SalesRecord } from "@prisma/client";
 import { z } from "zod";
+import { analyticsCustomerFilter, analyticsCustomerName } from "./customer-groups";
 
 export const salesAnalyticsFiltersSchema = z
   .object({
@@ -323,12 +324,16 @@ export function summarizeSalesRowsForTest(
 ): SalesAnalyticsOverview {
   const year = filters.year ?? new Date().getFullYear();
   const { startMonth, endMonth } = monthRange(filters);
-  const currentRows = rows.filter(
+  const scopedRows = rows
+    .filter((row) => !filters.customerName ||
+      analyticsCustomerName(row.customerName) === analyticsCustomerName(filters.customerName))
+    .map((row) => ({ ...row, customerName: analyticsCustomerName(row.customerName) }));
+  const currentRows = scopedRows.filter(
     (row) =>
       row.orderDate.getFullYear() === year &&
       monthInRange(row.orderDate.getMonth() + 1, startMonth, endMonth),
   );
-  const priorRows = rows.filter(
+  const priorRows = scopedRows.filter(
     (row) =>
       row.orderDate.getFullYear() === year - 1 &&
       monthInRange(row.orderDate.getMonth() + 1, startMonth, endMonth),
@@ -469,7 +474,7 @@ export function summarizeSalesRowsForTest(
         filterOptionRows.map((row) => String(row.orderDate.getFullYear())),
       ),
       salespeople: unique(filterOptionRows.map((row) => row.salesperson)),
-      customers: unique(filterOptionRows.map((row) => row.customerName)),
+      customers: unique(filterOptionRows.map((row) => analyticsCustomerName(row.customerName))),
       categories: unique(filterOptionRows.map((row) => row.category)),
       skus: unique(filterOptionRows.map((row) => row.sku)),
       states: unique(filterOptionRows.map((row) => row.shipToState)),
@@ -527,7 +532,7 @@ export async function getSalesAnalytics(
       where: {
         orderDate: dateWhere,
         ...(filters.salesperson ? { salesperson: filters.salesperson } : {}),
-        ...(filters.customerName ? { customerName: filters.customerName } : {}),
+        ...(filters.customerName ? { customerName: analyticsCustomerFilter(filters.customerName) } : {}),
         ...(filters.category ? { category: filters.category } : {}),
         ...(filters.sku ? { sku: filters.sku } : {}),
         ...(filters.shipToState ? { shipToState: filters.shipToState } : {}),
