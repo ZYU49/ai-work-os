@@ -67,11 +67,10 @@ function movementRowsTable(rows: CustomerMovementRow[], emptyText: string) {
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[620px] text-sm">
+      <table className="w-full min-w-[560px] text-sm">
         <thead>
           <tr className="border-b border-zinc-100 text-left text-xs uppercase text-zinc-500">
             <th className="px-4 py-3 font-medium">Customer</th>
-            <th className="px-4 py-3 font-medium">Salesperson</th>
             <th className="px-4 py-3 text-right font-medium">2026 Qty</th>
             <th className="px-4 py-3 text-right font-medium">2025 Qty</th>
             <th className="px-4 py-3 text-right font-medium">Qty Diff</th>
@@ -87,9 +86,6 @@ function movementRowsTable(rows: CustomerMovementRow[], emptyText: string) {
             >
               <td className="px-4 py-3 font-medium text-zinc-950">
                 {row.customerName}
-              </td>
-              <td className="px-4 py-3 text-zinc-600">
-                {row.salesperson ?? "N/A"}
               </td>
               <td className="px-4 py-3 text-right text-zinc-900">
                 {number(row.currentQuantity)}

@@ -383,6 +383,7 @@ describe("AnalyticsDashboard", () => {
     expect(screen.getByText("Top Growing Customers")).toBeVisible();
     expect(screen.getByText("Decliner Inc")).toBeVisible();
     expect(screen.getByText("Grower LLC")).toBeVisible();
+    expect(screen.queryByRole("columnheader", { name: "Salesperson" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /refresh/i })).toBeEnabled();
     expect(screen.getAllByText("Acme Tire").length).toBeGreaterThan(0);
     expect(screen.getByText("Salesperson Split")).toBeVisible();
