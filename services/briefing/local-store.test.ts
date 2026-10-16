@@ -63,15 +63,15 @@ describe("briefing local store", () => {
     );
   });
 
-  test("announces September sales and the matching prior-year period by default", () => {
-    const briefing = defaultBriefing(new Date("2026-10-05T15:00:00.000Z"));
+  test("announces September Midstate data and its rolling period by default", () => {
+    const briefing = defaultBriefing(new Date("2026-10-16T15:00:00.000Z"));
 
     expect(briefing).toMatchObject({
-      kind: "sales",
-      title: "September sales data updated",
+      kind: "midstate",
+      title: "September Midstate data updated",
       message:
-        "Sales data through September 30 is ready. Review 2026 vs. 2025 Jan-Sep totals, Product YoY, and September Customer Movement.",
-      href: "/analytics",
+        "Midstate September data is ready. Review October 2025-September 2026 rolling quantities, member item details, and Item Group rankings.",
+      href: "/analytics/midstate",
     });
   });
 });
