@@ -12,7 +12,7 @@ describe("SalesDeskBriefingWidget", () => {
     localStorage.clear();
   });
 
-  test("shows the latest briefing from Sutong reporter and expands history", () => {
+  test("shows the published update ahead of older saved briefings and keeps history", () => {
     addBriefing({
       kind: "sales",
       title: "Sales data updated",
@@ -29,18 +29,34 @@ describe("SalesDeskBriefingWidget", () => {
     );
     expect(screen.queryByText("ST")).not.toBeInTheDocument();
     expect(screen.getByText("SalesDesk Briefing")).toBeVisible();
-    expect(screen.getByText("Sales data updated")).toBeVisible();
+    expect(screen.getByText("Midstates October data updated")).toBeVisible();
     expect(
-      screen.getByText("July sales data is ready for YTD and monthly comparison."),
+      screen.getByText("October 2026 Midstates data is now available. Rolling 12 months: November 2025-October 2026."),
     ).toBeVisible();
 
     fireEvent.click(screen.getByRole("button", { name: "Open briefing calendar" }));
 
     expect(screen.getByText("Recent updates")).toBeVisible();
     expect(screen.getByText("Calendar")).toBeVisible();
-    expect(screen.getByRole("link", { name: "Open related page" })).toHaveAttribute(
-      "href",
-      "/analytics",
-    );
+    expect(screen.getByText("Sales data updated")).toBeVisible();
+    expect(screen.getAllByRole("link", { name: "Open related page" }).map(
+      (link) => link.getAttribute("href"),
+    )).toEqual(["/analytics/midstate", "/analytics"]);
+  });
+
+  test("allows later imports to become the latest update", () => {
+    addBriefing({
+      kind: "sales",
+      title: "Newer sales update",
+      message: "A later report is ready.",
+      createdAt: "2026-11-14T13:00:00.000Z",
+      href: "/analytics",
+    });
+
+    render(<SalesDeskBriefingWidget />);
+
+    expect(screen.getByText("Newer sales update")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Open briefing calendar" }));
+    expect(screen.getByText("Midstates October data updated")).toBeVisible();
   });
 });

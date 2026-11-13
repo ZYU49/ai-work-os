@@ -27,15 +27,15 @@ function createId(input: AddBriefingInput) {
     .replace(/^-|-$/g, "");
 }
 
-export function defaultBriefing(now = new Date()): BriefingEvent {
+export function defaultBriefing(): BriefingEvent {
   return {
     id: "system-default-briefing",
-    kind: "sales",
-    title: "October sales data updated",
+    kind: "midstate",
+    title: "Midstates October data updated",
     message:
-      "Sales data through October 2026 is ready, with January-October 2025 YoY comparisons. Midstate data remains through September 2026.",
-    createdAt: now.toISOString(),
-    href: "/analytics",
+      "October 2026 Midstates data is now available. Rolling 12 months: November 2025-October 2026.",
+    createdAt: "2026-11-13T15:30:00.000Z",
+    href: "/analytics/midstate",
   };
 }
 

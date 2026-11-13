@@ -70,7 +70,12 @@ export function SalesDeskBriefingWidget({
 
   useEffect(() => {
     function refresh() {
-      setEvents(readBriefings(5));
+      const published = defaultBriefing();
+      setEvents(
+        [published, ...readBriefings(5).filter((event) => event.id !== published.id)]
+          .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+          .slice(0, 5),
+      );
       setNow(new Date());
     }
 
@@ -83,7 +88,7 @@ export function SalesDeskBriefingWidget({
   }, []);
 
   const currentDate = useMemo(() => now ?? new Date(), [now]);
-  const latest = events[0] ?? defaultBriefing(currentDate);
+  const latest = events[0] ?? defaultBriefing();
   const days = useMemo(() => calendarDays(currentDate), [currentDate]);
   const eventDays = useMemo(() => eventDaySet(events), [events]);
 

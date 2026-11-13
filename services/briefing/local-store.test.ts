@@ -63,15 +63,16 @@ describe("briefing local store", () => {
     );
   });
 
-  test("announces October sales coverage without claiming a Midstate update", () => {
-    const briefing = defaultBriefing(new Date("2026-11-09T17:00:00.000Z"));
+  test("announces the October Midstates update with its published date", () => {
+    const briefing = defaultBriefing();
 
     expect(briefing).toMatchObject({
-      kind: "sales",
-      title: "October sales data updated",
+      kind: "midstate",
+      title: "Midstates October data updated",
       message:
-        "Sales data through October 2026 is ready, with January-October 2025 YoY comparisons. Midstate data remains through September 2026.",
-      href: "/analytics",
+        "October 2026 Midstates data is now available. Rolling 12 months: November 2025-October 2026.",
+      createdAt: "2026-11-13T15:30:00.000Z",
+      href: "/analytics/midstate",
     });
   });
 });
